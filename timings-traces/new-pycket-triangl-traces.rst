@@ -1,0 +1,32 @@
+module-prefetch: (sort.rkt) in: #<path:/N/u/cderici/Karst/racketland/racket/racket/collects/racket/private/>
+module-prefetch: (syntax/readerr) in: #<path:/N/u/cderici/Karst/racketland/racket/racket/collects/syntax/>
+RESULT-cpu: 4917.0
+RESULT-gc: 0.0
+RESULT-total: 4917.0
+RESULT-cpu: 4880.0
+RESULT-gc: 0.0
+RESULT-total: 4880.0
+RESULT-cpu: 4885.0
+RESULT-gc: 0.0
+RESULT-total: 4885.0
+RESULT-cpu: 4881.0
+RESULT-gc: 0.0
+RESULT-total: 4881.0
+RESULT-cpu: 5124.0
+RESULT-gc: 0.0
+RESULT-total: 5124.0
+RESULT-cpu: 4898.0
+RESULT-gc: 0.0
+RESULT-total: 4898.0
+RESULT-cpu: 4884.0
+RESULT-gc: 0.0
+RESULT-total: 4884.0
+RESULT-cpu: 4879.0
+RESULT-gc: 0.0
+RESULT-total: 4879.0
+RESULT-cpu: 4874.0
+RESULT-gc: 0.0
+RESULT-total: 4874.0
+RESULT-cpu: 4880.0
+RESULT-gc: 0.0
+RESULT-total: 4880.0

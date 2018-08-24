@@ -1,0 +1,64 @@
+
+(if (< n 0)
+    0
+    (let ((letone689 (- n 1))
+	  (letone690 (+ n 0)))
+      (if (< letone689 0)
+	  letone690
+	  (let ((letone691 (- letone689 1))
+		(letone692 (+ letone689 letone690)))
+	    (if (< letone691 0)
+		letone692
+		(let ((letone693 (- letone691 1))
+		      (letone694 (+ letone691 letone692)))
+		  (if (< letone693 0)
+		      letone694
+		      (let ((letone695 (- letone693 1))
+			    (letone696 (+ letone693 letone694)))
+			(if (< letone695 0)
+			    letone696
+			    
+			    (letrec ((loop585
+				      (lambda (lv707 lv708)
+					(if (< lv707 0)
+					    lv708
+					    (let ((letone709 (- lv707 1))
+						  (letone710 (+ lv707 lv708)))
+					      (if (< letone709 0)
+						  letone710
+						  (let ((letone711 (- letone709 1))
+							(letone712 (+ letone709 letone710)))
+						    (if (< letone711 0)
+							letone712
+							(let ((letone713 (- letone711 1))
+							      (letone714 (+ letone711 letone712)))
+							  (if (< letone713 0)
+							      letone714
+							      (let ((letone715 (- letone713 1))
+								    (letone716 (+ letone713 letone714)))
+								(if (< letone715 0)
+								    letone716
+
+								    (loop585 (- letone715 1)
+									     (+ letone715 letone716))))))))))))))
+			      (loop585 (- letone695 1)
+				       (+ letone695 letone696))))))))))))
+
+(letrec ((loop
+	  (lambda (i0 sum0)
+	    (if (< i0 0)
+		sum0
+		(let ((i1 (- i0 1))
+		      (sum1 (+ i0 sum0)))
+		  (if (< i1 0)
+		      sum1
+		      (let ((i2 (- i1 1))
+			    (sum2 (+ i1 sum1)))
+			(if (< i2 0)
+			    sum2
+			    (let ((i3 (- i2 1))
+				  (sum3 (+ i2 sum2)))
+			      (if (< i3 0)
+				  sum3
+				  (loop (- i3 1) (+ i3 sum3))))))))))))
+  (loop n 0))
