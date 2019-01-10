@@ -2,7 +2,7 @@
 
 #lang racket/base
 (require "conf.rkt")
-(define outer 100) ; 20
+(define outer 10) ; 20
 ;(define cat-iters 1) ;8)
 
 (define inport #f)
@@ -17,8 +17,8 @@
           (catport port)))))
 
 (define (go)
-  (set! inport (open-input-file "data/bib-cat"))
-  (set! outport (open-output-file/truncate "foo-cat"))
+  (set! inport (open-input-file "data/cat-bib"))
+  (set! outport (open-output-file/truncate "cat-foo"))
   (catport inport)
   (close-input-port inport))
 

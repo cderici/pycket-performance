@@ -59,6 +59,7 @@
 (define nucleic-iters     150)
 (define pnpoly-iters  2000000)
 (define sum-iters      350000)
+(define sumrec-iters    50000)
 (define sumfp-iters    250000)
 ; (define tfib-iters         20) threads
 

@@ -2,7 +2,7 @@
 
 #lang racket/base
 (require "conf.rkt")
-(define outer 100) ; 20
+(define outer 10) ; 20
 ;(define wc-iters 1) ;8)
 
 (define inport #f)
@@ -31,7 +31,7 @@
           (wcport port)))))
 
 (define (go)
-  (set! inport (open-input-file "data/bib-wc"))
+  (set! inport (open-input-file "data/wc-bib"))
   (set! nl 0)
   (set! nw 0)
   (set! nc 0)

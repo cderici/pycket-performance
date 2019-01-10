@@ -2,7 +2,7 @@
 
 #lang racket/base
 (require "conf.rkt")
-(define outer 100) ; 20
+(define outer 10) ; 20
 ;(define tail-iters 1) ;8)
 
 (define inport #f)
@@ -29,8 +29,8 @@
   (tail-r-aux port '()))
 
 (define (go)
-  (set! inport (open-input-file "data/bib-tail"))
-  (set! outport (open-output-file/truncate "foo-tail"))
+  (set! inport (open-input-file "data/tail-bib"))
+  (set! outport (open-output-file/truncate "tail-foo"))
   (tail-r inport)
   (close-input-port inport))
 

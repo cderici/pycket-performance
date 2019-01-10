@@ -3,7 +3,7 @@
 
 #;(require "both.rkt" "conf.rkt")
 (require "conf.rkt")
-(define outer 100) ;20)
+(define outer 10) ;20)
 ;(define sum-iters 1) ;350000)
 
 (define (run n)
@@ -15,7 +15,7 @@
   (do ([i 1 (add1 i)])
       ((> i outer) (void))
     (time (do ([i 1 (add1 i)])
-              ((> i sumrec-iters) (void))
+              ((> i sum-iters) (void))
             (run 10000)))))
 
 (main)

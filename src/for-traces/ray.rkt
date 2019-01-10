@@ -3,7 +3,8 @@
 
 #lang racket/base
 (require "conf.rkt")
-(define outer 100) ; 20
+(define outer 10) ; 20
+
 ;(define ray-iters 1) ; 350)
 
 (define (make-point x y z)
@@ -164,7 +165,7 @@
         (FLOAT* (exact->inexact z) -400.0)
         40.0
         0.75)))
-  (tracer "data/spheres-ray.pgm" (if (null? opt) 1 (car opt))))
+  (tracer "data/spheres.pgm" (if (null? opt) 1 (car opt))))
 
 (define (run)
   (ray-test 1)
