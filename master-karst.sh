@@ -13,6 +13,8 @@ echo > ../experiment-status
 if [ "${WHAT}" = "traces" ]; then
     rm -rf ../timings-traces
     mkdir ../timings-traces
+    rm -rf ../traces # fixme: make these conditional and parameterize (don't automatically delete things)
+    mkdir ../traces
     make new-traces
 else
     rm -rf ../timings-pycket
