@@ -110,7 +110,7 @@
   (begin
     (when (> (length lines) 100)
       (displayln (format "WARNING : we got ~a results from : ~a" (length lines) rst-file-str) (current-output-port)))
-    (map (lambda (line) (let-values ([(c g t) (get-results-one-line line)]) (string->number t))) (take lines 20))))
+    (map (lambda (line) (let-values ([(c g t) (get-results-one-line line)]) (string->number t))) (take lines (min (length lines) 100)))))
 
 (define (rst-file->time-list rst-file)
   (let* ([f (read-file rst-file)])
@@ -160,7 +160,7 @@
   (begin
     (when (< (length results) 100)
       (displayln (format "WARNING : we got ~a results from : ~a" (length results) rst-file) (current-output-port)))
-    (apply string-append (map (curry one-result->R-input bench-name mode-str) (take results 100)))))
+    (apply string-append (map (curry one-result->R-input bench-name mode-str) (take results (min 100 (length results)))))))
     
 (define (rst-file->R-input bench-name sys-str rst-file)
   (let* ([f (read-file rst-file)]
@@ -186,7 +186,7 @@
 
 (define old-racket-pycket '((old-racket . "RacketOLD") (old-pycket . "PycketOLD")))
 
-(define (generate-final-R-input directory)
+(define (generate-final-R-input directory traces?)
   (let ([systems pyckets])
     (for/fold ([total-str ""])
               ([sys (map car systems)])
@@ -195,7 +195,9 @@
                                ([bench benchmarks])
                        (let ([file-name (if (or (equal? sys 'old-pycket)
                                                 (equal? sys 'new-pycket))
-                                            (format "~a/~a-~a-with-warmup.rst" directory sys bench)
+                                            (if traces?
+                                                (format "~a/~a-~a-traces.rst" directory sys bench)
+                                                (format "~a/~a-~a-with-warmup.rst" directory sys bench))
                                             (format "~a/~a-~a.rst" directory sys bench))]
                              [sys-str (cdr (assv sys systems))])
                          (string-append inner-str (rst-file->R-input bench sys-str file-name))))))))
@@ -204,19 +206,24 @@
   (let ([str-to-be-written
          (string-append
           "#!/N/u/cderici/Karst/.local/bin/rebench -N -d -v /N/u/cderici/Karst/pycket-bench/rebench.conf\n"
-          (generate-final-R-input results-dir))])
+          (generate-final-R-input results-dir (equal? results-dir "timings-traces")))])
     (call-with-output-file file-name
       (λ (op) (display str-to-be-written op))
       #:exists 'replace)))
 
-#;(produce-R-input-file "timings-racket" "rackets.data")
+(module+ main
+  (require racket/cmdline)
 
-(produce-R-input-file "timings-pycket" "pyckets.data")
+  (define traces-or-timings
+    (command-line
+     #:args (mode)
+     (eprintf "mode : ~a\n" mode)
+     mode))
 
-#;(produce-R-input-file "old-racket-pycket" "old.racket.pycket.data")
+  (define dir (cond
+                [(equal? traces-or-timings "traces") "timings-traces"]
+                [(equal? traces-or-timings "timings") "timings-pycket"]
+                [else (error 'analyze-rebench-output "invalid mode argument")]))
 
-;(produce-R-input-file "karst.data")
-
-;(define f (read-file "all-karst/gcbench-regular.rst"))
-
-#;(define r (filter (lambda (l) (string-contains? l "RESULT")) (string-split f "\n\n")))
+  (eprintf "dir : ~a\n" dir)
+  (produce-R-input-file dir "pyckets.data"))
