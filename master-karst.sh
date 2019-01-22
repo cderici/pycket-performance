@@ -13,7 +13,7 @@ cd ..
 rm -f timings-pycket/*
 echo > experiment-status
 cd ./control-room
-if [ "$1" = "traces" ]; then
+if [ "${WHAT}" = "traces" ]; then
     make new-traces
 else
     make pycket-new
@@ -21,7 +21,7 @@ fi
 make run
 sleep 30m
 make clean-scripts
-if [ "$1" = "traces" ]; then
+if [ "${WHAT}" = "traces" ]; then
     make old-traces
 else
     make pycket-old
