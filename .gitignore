@@ -1,0 +1,4 @@
+*.json
+tmp/experiment-status_*
+*.sh.o*
+*~
