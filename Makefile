@@ -1,2 +1,5 @@
 karst:
-	qsub master-karst.sh
+	qsub master-karst.sh timings
+
+traces:
+	qsub master-karst.sh traces
