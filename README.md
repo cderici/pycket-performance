@@ -26,6 +26,6 @@ The `pyckets.data` file can be used to generate a final pdf containing the resul
 
 The entire operation takes roughly an hour.
 
-
+Typing `make traces` will perform a similar operation, only with lesser iteration times, so it will take shorter, and it'll output the trace log files for each benchmark into `traces` folder.
 
 [*] It usually takes 15-20mins to run the entire suite (in separate nodes of course), but the script allocates 30mins just in case of delays caused by cluster scheduling.
