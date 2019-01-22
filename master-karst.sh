@@ -9,13 +9,14 @@ cd "$PBS_O_WORKDIR"
 
 cd ./control-room
 make clean
-cd ..
-rm -f timings-pycket/*
-echo > experiment-status
-cd ./control-room
+echo > ../experiment-status
 if [ "${WHAT}" = "traces" ]; then
+    rm -rf ../timings-traces
+    mkdir ../timings-traces
     make new-traces
 else
+    rm -rf ../timings-pycket
+    mkdir ../timings-pycket
     make pycket-new
 fi
 make run
