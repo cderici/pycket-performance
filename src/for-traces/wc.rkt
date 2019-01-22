@@ -31,7 +31,7 @@
           (wcport port)))))
 
 (define (go)
-  (set! inport (open-input-file "data/wc-bib"))
+  (set! inport (open-input-file "data/bib-wc"))
   (set! nl 0)
   (set! nw 0)
   (set! nc 0)

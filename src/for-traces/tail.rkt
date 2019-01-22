@@ -29,8 +29,8 @@
   (tail-r-aux port '()))
 
 (define (go)
-  (set! inport (open-input-file "data/tail-bib"))
-  (set! outport (open-output-file/truncate "tail-foo"))
+  (set! inport (open-input-file "data/bib-tail"))
+  (set! outport (open-output-file/truncate "foo-tail"))
   (tail-r inport)
   (close-input-port inport))
 

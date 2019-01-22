@@ -165,7 +165,7 @@
         (FLOAT* (exact->inexact z) -400.0)
         40.0
         0.75)))
-  (tracer "data/spheres.pgm" (if (null? opt) 1 (car opt))))
+  (tracer "data/spheres-ray.pgm" (if (null? opt) 1 (car opt))))
 
 (define (run)
   (ray-test 1)
