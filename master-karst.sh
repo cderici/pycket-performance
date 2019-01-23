@@ -33,5 +33,5 @@ make run
 sleep 30m
 make clean-scripts
 cd ..
-racket analyze-rebench-output.rkt
+racket analyze-rebench-output.rkt ${WHAT}
 cp experiment-status tmp/experiment-status_`date '+%Y-%m-%d_%H:%M:%S'`
