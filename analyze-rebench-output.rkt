@@ -5,51 +5,6 @@
 
 (provide rst-file->time-list)
 
-
-#;(define benchmarks (list 'ack ;-- ready -- OK
-                         'array1 ;-- ready -- OK
-                         'cpstak ;-- ready -- OK
-                         'ctak ;-- ready -- OK 
-                         'diviter ;-- ready -- OK
-                         'divrec ;-- ready -- OK
-                         'fft ;-- read -- OK
-                         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;'fibc ;-- ready -- OK
-                         'fibfp ;-- ready -- OK
-                         'fib ;-- ready -- OK
-                         'gcbench ;-- ready -- OK 
-                         'mbrot ;-- ready -- OK
-                         'nqueens ;-- ready -- OK
-                         'nucleic ;-- ready -- OK 
-                         'paraffins ;-- ready -- OK
-                         'pi ;-- ready -- OK
-                         'pnpoly ;-- ready -- OK
-                         'string ;-- ready -- OK
-                         'sumfp ;-- ready -- OK
-                         'sumloop ;-- ready -- OK
-                         ;;;;;;;;;;;;;;;;;;;;;;;;;;;;'sumrecfp ;-- ready -- Ok
-                         'sumrec ;-- ready -- OK
-                         'sum ;-- ready -- OK
-                         'takl ;-- ready -- OK
-                         'tak ;-- ready -- OK
-                         'perm9 ;-- ready -- OK
-                         'gcold ;-- ready -- OK
-                         'deriv ;-- ready -- OK
-                         'primes ;-- ready -- OK
-                         'ray ;-- ready -- OK 
-                         'puzzle ;-- ready -- OK
-                         'triangl ;-- ready -- OK
-                         ;;;;;;;;;;;;;;;;;;;;;;;;;;'sum1 ;-- ready -- OK
-                         'wc ;-- ready -- OK 
-                         'cat ;-- ready -- OK 
-                         'graphs ;-- ready -- OK
-                         'tail ;-- ready -- OK 
-                         'nboyer ;-- ready -- OK
-                         'earley ;-- ready -- OK
-                         'sboyer ;-- ready -- OK
-                         'mazefun ;-- ready -- OK
-                         'simplex ;-- ready -- OK 
-                         ))
-
 (define dir-to-timings "../karst-100-in-process")
 
 (define (get-times file-lst)
@@ -214,16 +169,24 @@
 (module+ main
   (require racket/cmdline)
 
+  (define traces? #f)
+  (define timings? #f)
+
   (define traces-or-timings
     (command-line
      #:args (mode)
      (eprintf "mode : ~a\n" mode)
      mode))
 
+  (when (equal? traces-or-timings "traces")
+    (set! traces? #t))
+  (when (equal? traces-or-timings "timings")
+    (set! timings? #t))
+
   (define dir (cond
-                [(equal? traces-or-timings "traces") "timings-traces"]
-                [(equal? traces-or-timings "timings") "timings-pycket"]
+                [traces? "timings-traces"]
+                [timings? "timings-pycket"]
                 [else (error 'analyze-rebench-output "invalid mode argument")]))
 
   (eprintf "dir : ~a\n" dir)
-  (produce-R-input-file dir "pyckets.data"))
+  (produce-R-input-file dir (if traces? "pycket-traces.data" "pyckets.data")))
