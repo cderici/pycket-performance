@@ -75,3 +75,5 @@ cd ..
 echo "analysis starts"
 racket analyze-rebench-output.rkt ${WHAT}
 cp experiment-status tmp/experiment-status_`date '+%Y-%m-%d_%H:%M:%S'`
+echo "sending email report"
+sendmail canerderici@gmail.com < master-karst.sh.*
