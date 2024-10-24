@@ -4,7 +4,7 @@ The setup is as follows:
 
 - We have a Kubernetes cluster running on a master node with a working kubectl.
 - We have a docker image of Pycket that we want to run on the cluster. (use cderici/pycket:latest if you don't have one)
-- We have a persistent volume that we want to use to store the data. (the specs to create one are in this folder).
+- We have a persistent volume that we want to use to store the data. (the specs to create one are in this folder). Apply the persistent volume spec first, then the persistent volume claim spec.
 - The mounted persistent volume looks like this:
 
 ```
