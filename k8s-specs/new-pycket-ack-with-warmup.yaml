@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: new-ack-with-warmup
+spec:
+  template:
+    spec:
+      containers:
+      - name: pycket-benchmark
+        image: canerderici/pycket-benchmark:latest
+        command: ["/bin/sh", "-c"]
+        args: ["/mnt/nfs_share/benchmarks/scripts/new-pycket-ack-with-warmup.sh"]
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        volumeMounts:
+        - name: nfs-volume
+          mountPath: /mnt/nfs_share
+      restartPolicy: Never
+      volumes:
+      - name: nfs-volume
+        persistentVolumeClaim:
+          claimName: nfs-pvc
