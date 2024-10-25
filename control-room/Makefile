@@ -6,11 +6,11 @@ GENERATOR_SCRIPT := gen-kubejobs.rkt
 # run:
 # 	./run-all.sh
 
-# new-traces:
-# 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) --pycket --new --traces
+pycket-new-traces:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) --pycket --new --traces
 
-# old-traces:
-# 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) --pycket --old --traces
+pycket-old-traces:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) --pycket --old --traces
 
 racket:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) --racket --new

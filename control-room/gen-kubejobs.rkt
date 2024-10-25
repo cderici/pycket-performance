@@ -65,94 +65,71 @@
 ; (define RUN_NAME "extra-params-no-trace-10-times")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;; TEMPLATES FOR SCRIPTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;; GENERATORS FOR BASH SCRIPTS ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define preamble
-  "#!/bin/bash
+;; pycket-variant is either "new" or "old"
+;; with/no-warmup is either "with" or "no"
+;; gen-traces? is a boolean
+(define (preamble sys with/no-warmup gen-traces?)
+  (let ([base-pre "#!/bin/bash
 
 NFS_SHARE=/mnt/nfs_share
-BENCH_DIR=$NFS_SHARE/benchmarks
 PYCKET_DIR=/opt/pycket
-RACKET_DIR=$PYCKET_DIR/racket/bin
-SOURCE_DIR=$NFS_SHARE/pycket-performance/src
+BENCH_DIR=$NFS_SHARE/benchmarks"])
+    (if gen-traces?
+      (format "~a
+TRACES_DIR=$BENCH_DIR/traces
+SOURCE_DIR=$NFS_SHARE/pycket-performance/src/for-traces
+OUTPUT_DIR=$BENCH_DIR/timings-traces
+BINARY_DIR=$PYCKET_DIR
+
+" base-pre)
+      (format "~a
+SOURCE_DIR=$NFS_SHARE/pycket-performance/src/~a-warmup
 OUTPUT_DIR=$BENCH_DIR/timings-pycket
+BINARY_DIR=~a
 
-")
+" base-pre with/no-warmup (if (equal? sys "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
 
-(define (log-start old/new pycket/racket bench-name with-warmup?)
-  (format "echo \"~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'` - STARTED on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-          old/new pycket/racket bench-name (if with-warmup? "with" "no")))
+(define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
+  (let ([warmup/traces (if gen-traces? "trace" (format "~a-warmup" with/no-warmup))])
+    (format "echo \"~a ~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+            old/new pycket/racket bench-name warmup/traces started/completed)))
 
-(define (log-done old/new pycket/racket bench-name with-warmup?)
-  (format "echo \"~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'` - COMPLETED on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-          old/new pycket/racket bench-name (if with-warmup? "with" "no")))
+(define (racket-launcher bench-name _1 _2 _3)
+  (format "$BINARY_DIR/racket $SOURCE_DIR/with-warmup/~a.rkt &>> $OUTPUT_DIR/racket-~a.rst\n\n"
+                bench-name bench-name))
 
-(define (launch-benchmark-with-warmup binary bench-src-path output-path)
-  (format "~a ~a &>> ~a\n\n"
-          binary bench-src-path output-path))
-
-(define (launch-benchmark-no-warmup binary bench-src-path output-path)
-  (format "
+;; pycket-variant is either "new" or "old"
+;; with/no-warmup is either "with" or "no"
+;; gen-traces? is a boolean
+(define (pycket-launcher bench-name pycket-variant with/no-warmup gen-traces?)
+  (when (and (equal? with/no-warmup "no") gen-traces?)
+    (error 'pycket-launcher "Cannot generate traces without warmup"))
+  (let ([pycket-binary (if (equal? pycket-variant "new")
+                            "pycket-c-linklets"
+                            "pycket-c")]
+        [time-output-file
+          (if gen-traces?
+            (format "~a-pycket-~a-traced.rst" pycket-variant bench-name)
+            (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))])
+    (if (equal? with/no-warmup "no")
+      ;; no warmup -- single run in a for loop
+      (format "
 for i in `seq 1 100`;
 do
-  ~a ~a &>> ~a
+  $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done\n\n
-"
-    binary bench-src-path output-path))
+" pycket-binary bench-name time-output-file)
 
-;; Racket
-
-(define (launch-racket bench-name _)
-  (launch-benchmark-with-warmup
-    (format "$RACKET_DIR/racket")
-    (format "$SOURCE_DIR/with-warmup/~a.rkt" bench-name)
-    (format "$OUTPUT_DIR/racket-~a.rst" bench-name)))
-
-;;;; Pycket With Warmup
-
-;; pycket-variane is either "new" or "old"
-(define (launch-pycket-with-warmup bench-name pycket-variant)
-  (unless (memv pycket-variant '("new" "old"))
-    (error 'launch-pycket-with-warmup "pycket-variant must be either 'new or 'old"))
-  (let ([pycket-binary (if (equal? pycket-variant "new")
-                           "pycket-c-linklets"
-                           "pycket-c")])
-    (launch-benchmark-with-warmup
-      (format "$PYCKET_DIR/~a" pycket-binary)
-      (format "$SOURCE_DIR/with-warmup/~a.rkt" bench-name)
-      (format "$OUTPUT_DIR/~a-pycket-~a-with-warmup.rst"
-        pycket-variant
-        bench-name))))
-
-(define (launch-new-pycket-with-warmup bench-name)
-  (launch-pycket-with-warmup bench-name "new"))
-
-(define (launch-old-pycket-with-warmup bench-name)
-  (launch-pycket-with-warmup bench-name "old"))
-
-;;;; Pycket No Warmup
-
-;; pycket-variane is either "new" or "old"
-(define (launch-pycket-no-warmup bench-name pycket-variant)
-  (unless (memv pycket-variant '("new" "old"))
-    (error 'launch-pycket-with-warmup "pycket-variant must be either 'new or 'old"))
-  (let ([pycket-binary (if (equal? pycket-variant "new")
-                           "pycket-c-linklets"
-                           "pycket-c")])
-    (launch-benchmark-no-warmup
-      (format "$PYCKET_DIR/~a" pycket-binary)
-      (format "$SOURCE_DIR/no-warmup/~a.rkt" bench-name)
-      (format "$OUTPUT_DIR/~a-pycket-~a-no-warmup.rst"
-        pycket-variant
-        bench-name))))
-
-(define (launch-new-pycket-no-warmup bench-name)
-  (launch-pycket-no-warmup bench-name "new"))
-
-(define (launch-old-pycket-no-warmup bench-name)
-  (launch-pycket-no-warmup bench-name "old"))
-
+      ;; with warmup -- multiple runs within the benchmark source
+      (if gen-traces?
+        (format "PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
+                pycket-variant bench-name pycket-binary bench-name time-output-file)
+        (format "$BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
+                pycket-binary bench-name time-output-file))
+    )))
 
 (struct kubejob-config (bench-name pycket/racket old/new with-warmup? gen-traces?))
 
@@ -164,7 +141,7 @@ done\n\n
         [sys (kubejob-config-pycket/racket config)]
         [old/new (kubejob-config-old/new config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
-        [generate-traces? (kubejob-config-with-warmup? config)])
+        [generate-traces? (kubejob-config-gen-traces? config)])
     (unless (memv sys '("pycket" "racket"))
       (error 'gen-script "system must be either \"pycket\" or \"racket\""))
     (unless (memv old/new '("old" "new"))
@@ -173,21 +150,20 @@ done\n\n
       (error 'gen-script "with-warmup? must be a boolean"))
     (unless (boolean? generate-traces?)
       (error 'gen-script "generate-traces? must be a boolean"))
-    (let ([launch-function
+    (let* ([launch-function
             (if (equal? sys "racket")
-                launch-racket
-                (if with-warmup?
-                    launch-pycket-with-warmup
-                    launch-pycket-no-warmup))]
-          [file-path-str
-            (format "scripts/~a-~a-~a-~a-warmup.sh"
-              old/new sys bench-name (if with-warmup? "with" "no"))])
+                racket-launcher
+                pycket-launcher)]
+           [with/no-warmup (if with-warmup? "with" "no")]
+           [file-path-str
+             (format "scripts/~a-~a-~a-~a-warmup.sh"
+               old/new sys bench-name with/no-warmup)])
       (values file-path-str
               (format "~a~a~a~a"
-                preamble
-                (log-start old/new sys bench-name with-warmup?)
-                (launch-function bench-name old/new)
-                (log-done old/new sys bench-name with-warmup?))))))
+                (preamble sys with/no-warmup generate-traces?)
+                (log-line old/new sys bench-name with/no-warmup generate-traces? "STARTED")
+                (launch-function bench-name old/new with/no-warmup generate-traces?)
+                (log-line old/new sys bench-name with/no-warmup generate-traces? "COMPLETED"))))))
 
 (define script-template
   "#!/bin/bash
@@ -348,6 +324,10 @@ done
 echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experiment-status "
 )
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;; GENERATORS FOR KUBERNETES JOBS ;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (module+ main
   (require racket/cmdline)
 
@@ -374,7 +354,7 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
    [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! traces #t)]
 
    #:args ()
-   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\n\n" sys mode with-warmup?)
+   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\ngenerate-traces? : ~a\n\n" sys mode with-warmup? traces)
 
    #;(when traces
       (unless (equal? sys 'pycket)
@@ -403,7 +383,7 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
             (lambda (bop)
               (display script-content bop))
             #:exists 'replace)
-          (displayln (format "generating script: ~a -- with contents:\n~a\n"
+          (displayln (format "generating script: ~a -- with contents:\n\n~a\n"
                              script-path script-content)))))
 
    ;; submit all script
