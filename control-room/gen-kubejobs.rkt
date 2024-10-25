@@ -2,7 +2,7 @@
 
 (provide benchmarks)
 
-(define benchmarks (list 'ack ;-- ready -- OK
+#;(define benchmarks (list 'ack ;-- ready -- OK
 		         'array1 ;-- ready -- OK
                          'cpstak ;-- ready -- OK
                      	 'ctak ;-- ready -- OK
@@ -46,7 +46,8 @@
                      'simplex ;-- ready -- OK
                      ))
 
-#;(define benchmarks (list 'mazefun 'deriv 'nqueens 'sumrec 'nucleic 'triangl 'mbrot))
+(define benchmarks (list
+  'ack 'mbrot))
 
 
 ;; 1 - remove the logging, without the jit parameters
@@ -61,7 +62,7 @@
 ;; "no-trace-log-10-times"
 ;; "extra-params-no-trace-10-times"
 
-(define RUN_NAME "extra-params-no-trace-10-times")
+; (define RUN_NAME "extra-params-no-trace-10-times")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;; TEMPLATES FOR SCRIPTS ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -70,11 +71,12 @@
 (define preamble
   "#!/bin/bash
 
-  NFS_SHARE=/mnt/nfs_share
-  BENCH_DIR=$NFS_SHARE/benchmarks
-  PYCKET_DIR=/opt/pycket
-  SOURCE_DIR=$NFS_SHARE/pycket-performance/src
-  OUTPUT_DIR=$BENCH_DIR/timings-pycket
+NFS_SHARE=/mnt/nfs_share
+BENCH_DIR=$NFS_SHARE/benchmarks
+PYCKET_DIR=/opt/pycket
+RACKET_DIR=$PYCKET_DIR/racket/bin
+SOURCE_DIR=$NFS_SHARE/pycket-performance/src
+OUTPUT_DIR=$BENCH_DIR/timings-pycket
 
 ")
 
@@ -92,18 +94,18 @@
 
 (define (launch-benchmark-no-warmup binary bench-src-path output-path)
   (format "
-  for i in `seq 1 100`;
-  do
-    ~a ~a &>> ~a
-  done\n\n
-  "
+for i in `seq 1 100`;
+do
+  ~a ~a &>> ~a
+done\n\n
+"
     binary bench-src-path output-path))
 
 ;; Racket
 
 (define (launch-racket bench-name _)
   (launch-benchmark-with-warmup
-    (format "$RACKET_DIR/racket" bench-name)
+    (format "$RACKET_DIR/racket")
     (format "$SOURCE_DIR/with-warmup/~a.rkt" bench-name)
     (format "$OUTPUT_DIR/racket-~a.rst" bench-name)))
 
@@ -154,13 +156,15 @@
 
 (struct kubejob-config (bench-name pycket/racket old/new with-warmup? gen-traces?))
 
+;; Takes a benchmark config and produces two values
+;; 1. the path of the script file
+;; 2. the script content
 (define (gen-script config)
   (let ([bench-name (kubejob-config-bench-name config)]
         [sys (kubejob-config-pycket/racket config)]
         [old/new (kubejob-config-old/new config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-with-warmup? config)])
-    )
     (unless (memv sys '("pycket" "racket"))
       (error 'gen-script "system must be either \"pycket\" or \"racket\""))
     (unless (memv old/new '("old" "new"))
@@ -174,8 +178,16 @@
                 launch-racket
                 (if with-warmup?
                     launch-pycket-with-warmup
-                    launch-pycket-no-warmup))])
-      (launch-function bench-name old/new)))
+                    launch-pycket-no-warmup))]
+          [file-path-str
+            (format "scripts/~a-~a-~a-~a-warmup.sh"
+              old/new sys bench-name (if with-warmup? "with" "no"))])
+      (values file-path-str
+              (format "~a~a~a~a"
+                preamble
+                (log-start old/new sys bench-name with-warmup?)
+                (launch-function bench-name old/new)
+                (log-done old/new sys bench-name with-warmup?))))))
 
 (define script-template
   "#!/bin/bash
@@ -336,11 +348,6 @@ done
 echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experiment-status "
 )
 
-#|
-
-
-|#
-
 (module+ main
   (require racket/cmdline)
 
@@ -355,70 +362,52 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
 
   (command-line
    #:once-any
-   [("--racket") "generate racket scripts" (set! sys 'racket)]
-   [("--pycket") "generate pycket scripts" (set! sys 'pycket)]
+   [("--racket") "generate racket scripts" (set! sys "racket")]
+   [("--pycket") "generate pycket scripts" (set! sys "pycket")]
    #;[("--run-all-script") "generate the run-all.sh script for the sh files in the directory" (set! sys 'runall-script)]
    #:once-any
-   [("--old") "old" (set! mode 'old)]
-   [("--new") "new" (set! mode 'new)]
+   [("--old") "old" (set! mode "old")]
+   [("--new") "new" (set! mode "new")]
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
    [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! traces #t)]
 
    #:args ()
-   (printf "GENERATING: ~a jobs -- mode : ~a - with-warmup? : ~a\n" sys mode with-warmup?)
+   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\n\n" sys mode with-warmup?)
 
-   (when traces
+   #;(when traces
       (unless (equal? sys 'pycket)
 	 	    (error 'gen-scripts "system has to be pycket to generate JIT backend logs")))
 
-   (when (equal? sys 'racket) (set! with-warmup? #t))
+   #;(when (equal? sys 'racket) (set! with-warmup? #t))
 
    (for ([b (in-list benchmarks)])
      (let* ([config (kubejob-config b sys mode with-warmup? traces)]
             [bash-script-name (if (equal? sys 'racket)
      	   		      	  (format "~a-~a-~a.sh" mode sys b)
-				  (if traces
-				      (format "~a-~a-~a-traces.sh" mode sys b)
-     	   		  (format "~a-~a-~a-~a-warmup.sh" mode sys b (if with-warmup? "with" "no"))))]
-            [command (if (equal? sys 'racket)
+              (if traces
+                  (format "~a-~a-~a-traces.sh" mode sys b)
+                  (format "~a-~a-~a-~a-warmup.sh" mode sys b (if with-warmup? "with" "no"))))]
+            #;[command (if (equal? sys 'racket)
                          (if (equal? mode 'old) (format "~~/racketland/racket/bin/racket")
 			     	       	     (format "~~/racketland/racket/racket/bin/racket"))
                          (if (equal? mode 'new) "~/pycketland/pycket/pycket-c-linklets" "~/pycketland/pycket/pycket-c"))]
-            [src-dir (if traces
+            #;[src-dir (if traces
 	    	     	 "../src/for-traces"
 	    	         (if with-warmup?
                              "../src/with-warmup"
                              "../src/without-warmup"))])
-
-       (call-with-output-file bash-script-name
-         (lambda (bop)
-           (display
-	   	    (if (equal? sys 'racket)
-		    	(format racket-template
-				m sys b
-				command src-dir b
-				m sys b
-				m sys b)
-			(if traces
-			    (format traces-template
-                            	    mode sys b with-warmup?
-			  	    mode b
-                            	    command src-dir b
-                            	    mode sys b
-                            	    mode sys b with-warmup?)
-			    (format (if with-warmup?
-                                        with-warmup-template
-				        without-warmup-template)
-                                    mode sys b with-warmup?
-                            	    command src-dir b
-                            	    mode sys b
-                            	    mode sys b with-warmup?))) bop))
-         #:exists 'replace)))
+        (let-values ([(script-path script-content) (gen-script config)])
+          #;(call-with-output-file script-path
+            (lambda (bop)
+              (display script-content bop))
+            #:exists 'replace)
+          (displayln (format "generating script: ~a -- with contents:\n~a\n"
+                             script-path script-content)))))
 
    ;; submit all script
-   (call-with-output-file master-script-name
+   #;(call-with-output-file master-script-name
      (lambda (op)
        (display "#!/bin/bash \n\n" op)
        (for ([p (directory-list)])
@@ -428,5 +417,5 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
                (displayln (format "qsub ~a" p) op))))))
      #:exists 'replace)
 
-   (system "chmod 755 *.sh")
+   #;(system "chmod 755 *.sh")
    ))
