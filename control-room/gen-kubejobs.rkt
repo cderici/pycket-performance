@@ -93,7 +93,7 @@ BINARY_DIR=~a
 " base-pre with/no-warmup (if (equal? sys "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
 
 (define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
-  (let ([warmup/traces (if gen-traces? "trace" (format "~a-warmup" with/no-warmup))])
+  (let ([warmup/traces (if gen-traces? "traces" (format "~a-warmup" with/no-warmup))])
     (format "echo \"~a ~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
             old/new pycket/racket bench-name warmup/traces started/completed)))
 
@@ -112,7 +112,7 @@ BINARY_DIR=~a
                             "pycket-c")]
         [time-output-file
           (if gen-traces?
-            (format "~a-pycket-~a-traced.rst" pycket-variant bench-name)
+            (format "~a-pycket-~a-traces.rst" pycket-variant bench-name)
             (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))])
     (if (equal? with/no-warmup "no")
       ;; no warmup -- single run in a for loop
@@ -155,9 +155,10 @@ done\n\n
                 racket-launcher
                 pycket-launcher)]
            [with/no-warmup (if with-warmup? "with" "no")]
+           [file-prefix (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))]
            [file-path-str
-             (format "scripts/~a-~a-~a-~a-warmup.sh"
-               old/new sys bench-name with/no-warmup)])
+             (format "scripts/~a-~a-~a-~a.sh"
+                 old/new sys bench-name file-prefix)])
       (values file-path-str
               (format "~a~a~a~a"
                 (preamble sys with/no-warmup generate-traces?)
@@ -379,11 +380,11 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
                              "../src/with-warmup"
                              "../src/without-warmup"))])
         (let-values ([(script-path script-content) (gen-script config)])
-          #;(call-with-output-file script-path
+          (call-with-output-file script-path
             (lambda (bop)
               (display script-content bop))
             #:exists 'replace)
-          (displayln (format "generating script: ~a -- with contents:\n\n~a\n"
+          #;(displayln (format "generating script: ~a -- with contents:\n\n~a\n"
                              script-path script-content)))))
 
    ;; submit all script
@@ -397,5 +398,5 @@ echo \"DONE ===> ~a ~a ~a ~a-warmup - `date '+%Y-%m-%d %H:%M:%S'`\" >> ../experi
                (displayln (format "qsub ~a" p) op))))))
      #:exists 'replace)
 
-   #;(system "chmod 755 *.sh")
+   (system "chmod 755 scripts/*.sh")
    ))
