@@ -2,6 +2,7 @@ all: racket pycket
 
 RACKET_EXECUTABLE := $(shell which racket)
 GENERATOR_SCRIPT := gen-kubejobs.rkt
+SCRIPTS_DIR := scripts
 
 # run:
 # 	./run-all.sh
@@ -39,7 +40,7 @@ pycket-new-no-warmup:
 
 
 activate:
-	chmod 755 *.sh
+	chmod 755 $(SCRIPTS_DIR)/*.sh
 
 clean: clean-racket clean-pycket clean-tmps
 	rm -rf run-all.sh
@@ -52,19 +53,19 @@ clean-scripts:
 	rm -rf *.sh
 
 clean-racket:
-	rm -rf *-racket-*.sh
+	rm -rf $(SCRIPTS_DIR)/*-racket-*.sh
 
 clean-pycket:
-	rm -rf *-pycket-*.sh
+	rm -rf $(SCRIPTS_DIR)/*-pycket-*.sh
 
 clean-old:
-	rm -rf old-*.sh
+	rm -rf $(SCRIPTS_DIR)/old-*.sh
 
 clean-new:
-	rm -rf new-*.sh
+	rm -rf $(SCRIPTS_DIR)/new-*.sh
 
 clean-with-warmup:
-	rm -rf *with-warmup*
+	rm -rf $(SCRIPTS_DIR)/*with-warmup*
 
 clean-no-warmup:
-	rm -rf *no-warmup*
+	rm -rf $(SCRIPTS_DIR)/*no-warmup*
