@@ -88,15 +88,18 @@ BINARY_DIR=$PYCKET_DIR
 " base-pre)
       (format "~a
 SOURCE_DIR=$NFS_SHARE/pycket-performance/src/~a-warmup
-OUTPUT_DIR=$BENCH_DIR/timings-pycket
+OUTPUT_DIR=$BENCH_DIR/timings-~a
 BINARY_DIR=~a
 
-" base-pre with/no-warmup (if (equal? pycket/racket "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
+" base-pre with/no-warmup pycket/racket (if (equal? pycket/racket "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
 
 (define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
   (let ([warmup/traces (if gen-traces? "traces" (format "~a-warmup" with/no-warmup))])
-    (format "echo \"~a ~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-            old/new pycket/racket bench-name warmup/traces started/completed)))
+    (if (equal? pycket/racket "racket")
+        (format "echo \"~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+            pycket/racket bench-name started/completed)
+        (format "echo \"~a ~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+                old/new pycket/racket bench-name warmup/traces started/completed))))
 
 (define (racket-launcher bench-name _1 _2 _3)
   (format "$BINARY_DIR/racket $SOURCE_DIR/with-warmup/~a.rkt &>> $OUTPUT_DIR/racket-~a.rst\n\n"
@@ -153,10 +156,11 @@ done\n\n
                 racket-launcher
                 pycket-launcher)]
            [with/no-warmup (if with-warmup? "with" "no")]
-           [file-prefix (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))]
+           [file-postfix (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))]
            [file-path-str
-             (format "scripts/~a-~a-~a-~a.sh"
-                 old/new pycket/racket bench-name file-prefix)])
+            (if (equal? pycket/racket "racket")
+                (format "scripts/~a-~a.sh" pycket/racket bench-name)
+                (format "scripts/~a-~a-~a-~a.sh" old/new pycket/racket bench-name file-postfix))])
       (values file-path-str
               (format "~a~a~a~a"
                 (preamble pycket/racket with/no-warmup generate-traces?)
@@ -230,7 +234,7 @@ spec:
   (require racket/cmdline)
 
   (define pycket/racket #f) ;; "racket" or "pycket"
-  (define old/new #f) ;; "old" or "new"
+  (define old/new "new") ;; "old" or "new"
   (define with-warmup? #f)
   (define generate-traces? #f)
 
@@ -278,7 +282,9 @@ spec:
 
   (let ([scripts/jobs (if gen-scripts "scripts" "jobs")]
         [traces/warmup (if generate-traces? "traces" (format "~a-warmup" (if with-warmup? "with" "no")))])
-    (printf "\nDONE GENERATING ~a ~a ~a ~a\n\n" pycket/racket old/new scripts/jobs traces/warmup))
+    (if (equal? pycket/racket "racket")
+      (printf "\nDONE GENERATING ~a ~a\n\n" pycket/racket scripts/jobs)
+      (printf "\nDONE GENERATING ~a ~a ~a ~a\n\n" pycket/racket old/new scripts/jobs traces/warmup)))
 
    ;; submit all script
    #;(call-with-output-file master-script-name

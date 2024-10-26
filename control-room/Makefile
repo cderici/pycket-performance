@@ -70,7 +70,7 @@ clean-scripts:
 
 .PHONY: clean-racket
 clean-racket:
-	rm -rf $(SCRIPTS_DIR)/*-racket-*.sh
+	rm -rf $(SCRIPTS_DIR)/*racket-*.sh
 
 .PHONY: clean-pycket
 clean-pycket:
