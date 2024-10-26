@@ -72,7 +72,7 @@
 ;; pycket-variant is either "new" or "old"
 ;; with/no-warmup is either "with" or "no"
 ;; gen-traces? is a boolean
-(define (preamble sys with/no-warmup gen-traces?)
+(define (preamble pycket/racket with/no-warmup gen-traces?)
   (let ([base-pre "#!/bin/bash
 
 NFS_SHARE=/mnt/nfs_share
@@ -91,7 +91,7 @@ SOURCE_DIR=$NFS_SHARE/pycket-performance/src/~a-warmup
 OUTPUT_DIR=$BENCH_DIR/timings-pycket
 BINARY_DIR=~a
 
-" base-pre with/no-warmup (if (equal? sys "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
+" base-pre with/no-warmup (if (equal? pycket/racket "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
 
 (define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
   (let ([warmup/traces (if gen-traces? "traces" (format "~a-warmup" with/no-warmup))])
@@ -139,11 +139,11 @@ done\n\n
 ;; 2. the script content
 (define (gen-script config)
   (let ([bench-name (kubejob-config-bench-name config)]
-        [sys (kubejob-config-pycket/racket config)]
+        [pycket/racket (kubejob-config-pycket/racket config)]
         [old/new (kubejob-config-old/new config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
-    (unless (memv sys '("pycket" "racket"))
+    (unless (memv pycket/racket '("pycket" "racket"))
       (error 'gen-script "system must be either \"pycket\" or \"racket\""))
     (unless (memv old/new '("old" "new"))
       (error 'gen-script "old/new must be either \"old\" or \"new\""))
@@ -152,62 +152,77 @@ done\n\n
     (unless (boolean? generate-traces?)
       (error 'gen-script "generate-traces? must be a boolean"))
     (let* ([launch-function
-            (if (equal? sys "racket")
+            (if (equal? pycket/racket "racket")
                 racket-launcher
                 pycket-launcher)]
            [with/no-warmup (if with-warmup? "with" "no")]
            [file-prefix (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))]
            [file-path-str
              (format "scripts/~a-~a-~a-~a.sh"
-                 old/new sys bench-name file-prefix)])
+                 old/new pycket/racket bench-name file-prefix)])
       (values file-path-str
               (format "~a~a~a~a"
-                (preamble sys with/no-warmup generate-traces?)
-                (log-line old/new sys bench-name with/no-warmup generate-traces? "STARTED")
+                (preamble pycket/racket with/no-warmup generate-traces?)
+                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "STARTED")
                 (launch-function bench-name old/new with/no-warmup generate-traces?)
-                (log-line old/new sys bench-name with/no-warmup generate-traces? "COMPLETED"))))))
+                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "COMPLETED"))))))
+
+(define (generate-scripts benchmarks pycket/racket old/new with-warmup? gen-traces?)
+  (for ([b (in-list benchmarks)])
+    (let ([config (kubejob-config pycket/racket old/new with-warmup? gen-traces?)])
+      (let-values ([(script-path script-content) (gen-script config)])
+        (call-with-output-file script-path
+          (lambda (bop)
+            (display script-content bop))
+          #:exists 'replace)
+        #;(displayln (format "generating script: ~a -- with contents:\n\n~a\n"
+                           script-path script-content))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;; GENERATORS FOR KUBERNETES JOBS ;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;s
+
+(define (generate-kube-jobs benchmarks pycket/racket old/new with-warmup? gen-traces?)
+  3)
 
 (module+ main
   (require racket/cmdline)
 
-  (define sys #f) ;'(racket pycket))
-  (define mode #f) ;'(old new))
-  (define with-warmup? #f) ;'(-with-warmup -no-warmup)) ; this is only for pycket
-
-  (define traces #f)
+  (define pycket/racket #f) ;; "racket" or "pycket"
+  (define old/new #f) ;; "old" or "new"
+  (define with-warmup? #f)
+  (define gen-traces? #f)
 
   (define master-script-name "kube-apply-all-jobs.sh")
   (define racket-master-script "run-rackets.sh")
 
-  (command-line
+  (define gen-scripts #t)
+  (define gen-jobs #f)
+
+  (command-lines
+   #:once-each
+   [("--scripts") "generate scripts" (set! gen-scripts #t)]
+   [("--jobs") "generate kubernetes jobs" (set! gen-jobs #t)]
    #:once-any
-   [("--racket") "generate racket scripts" (set! sys "racket")]
-   [("--pycket") "generate pycket scripts" (set! sys "pycket")]
+   [("--racket") "generate racket scripts" (set! pycket/racket "racket")]
+   [("--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
    #;[("--run-all-script") "generate the run-all.sh script for the sh files in the directory" (set! sys 'runall-script)]
    #:once-any
-   [("--old") "old" (set! mode "old")]
-   [("--new") "new" (set! mode "new")]
+   [("--old") "old" (set! old/new "old")]
+   [("--new") "new" (set! old/new "new")]
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
-   [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! traces #t)]
+   [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! gen-traces? #t)]
 
    #:args ()
-   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\ngenerate-traces? : ~a\n\n" sys mode with-warmup? traces)
+   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\ngenerate-traces? : ~a\n\n" pycket/racket old/new with-warmup? gen-traces?)
 
-   (for ([b (in-list benchmarks)])
-     (let ([config (kubejob-config b sys mode with-warmup? traces)])
-        (let-values ([(script-path script-content) (gen-script config)])
-          (call-with-output-file script-path
-            (lambda (bop)
-              (display script-content bop))
-            #:exists 'replace)
-          #;(displayln (format "generating script: ~a -- with contents:\n\n~a\n"
-                             script-path script-content)))))
+  (when gen-scripts
+    (generate-scripts benchmarks pycket/racket old/new with-warmup? gen-traces?))
+
+  (when gen-jobs
+    (generate-kube-jobs benchmarks pycket/racket old/new with-warmup? gen-traces?))
 
    ;; submit all script
    #;(call-with-output-file master-script-name
