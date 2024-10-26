@@ -169,7 +169,7 @@ done\n\n
 
 (define (generate-scripts benchmarks pycket/racket old/new with-warmup? gen-traces?)
   (for ([b (in-list benchmarks)])
-    (let ([config (kubejob-config pycket/racket old/new with-warmup? gen-traces?)])
+    (let ([config (kubejob-config b pycket/racket old/new with-warmup? gen-traces?)])
       (let-values ([(script-path script-content) (gen-script config)])
         (call-with-output-file script-path
           (lambda (bop)
@@ -196,10 +196,10 @@ done\n\n
   (define master-script-name "kube-apply-all-jobs.sh")
   (define racket-master-script "run-rackets.sh")
 
-  (define gen-scripts #t)
+  (define gen-scripts #f)
   (define gen-jobs #f)
 
-  (command-lines
+  (command-line
    #:once-each
    [("--scripts") "generate scripts" (set! gen-scripts #t)]
    [("--jobs") "generate kubernetes jobs" (set! gen-jobs #t)]
@@ -216,13 +216,19 @@ done\n\n
    [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! gen-traces? #t)]
 
    #:args ()
-   (printf "\nGENERATING ~a jobs\nMODE : ~a\nwith-warmup? : ~a\ngenerate-traces? : ~a\n\n" pycket/racket old/new with-warmup? gen-traces?)
+
+  (unless (or gen-scripts gen-jobs)
+    (error 'main "Please specify either --scripts or --jobs"))
 
   (when gen-scripts
     (generate-scripts benchmarks pycket/racket old/new with-warmup? gen-traces?))
 
   (when gen-jobs
     (generate-kube-jobs benchmarks pycket/racket old/new with-warmup? gen-traces?))
+
+  (let ([scripts/jobs (if gen-scripts "scripts" "jobs")]
+        [traces/warmup (if gen-traces? "traces" (format "~a-warmup" (if with-warmup? "with" "no")))])
+    (printf "\nDONE GENERATING ~a ~a ~a ~a\n\n" pycket/racket old/new scripts/jobs traces/warmup))
 
    ;; submit all script
    #;(call-with-output-file master-script-name
@@ -235,5 +241,5 @@ done\n\n
                (displayln (format "qsub ~a" p) op))))))
      #:exists 'replace)
 
-   (system "chmod 755 scripts/*.sh")
+   (and (system "chmod 755 scripts/*.sh") (void))
    ))
