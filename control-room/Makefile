@@ -1,16 +1,25 @@
-all: all-racket-scripts all-pycket-scripts
+all: all-racket all-pycket
 
 RACKET_EXECUTABLE := $(shell which racket)
 GENERATOR_SCRIPT := gen-kubejobs.rkt
 SCRIPTS_DIR := scripts
-JOBS_DIR := kubejobs
+JOBS_DIR := jobs
+DOCKER_IMAGE := canerderici/pycket-benchmark:latest
 
-.PHONY: all-pycket-scripts
-all-pycket-scripts: all-pycket-old-scripts all-pycket-new-scripts
+
+.PHONY: all-pycket
+all-pycket: all-pycket-scripts all-pycket-jobs
+
+.PHONY: all-racket
+all-racket: all-racket-scripts all-racket-jobs
+
 
 #################################################################
 ########################## SCRIPTS ##############################
 #################################################################
+
+.PHONY: all-pycket-scripts
+all-pycket-scripts: all-pycket-new-scripts all-pycket-old-scripts
 
 # Pycket NEW scripts
 
@@ -28,7 +37,6 @@ pycket-new-no-warmup-scripts:
 .PHONY: pycket-new-traces-scripts
 pycket-new-traces-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t
-
 
 # Pycket OLD scripts
 
@@ -57,6 +65,9 @@ all-racket-scripts:
 ####################### KUBERNETES JOBS #########################
 #################################################################
 
+.PHONY: all-pycket-jobs
+all-pycket-jobs: all-pycket-new-jobs all-pycket-old-jobs
+
 # Pycket NEW jobs
 
 .PHONY: all-pycket-new-jobs
@@ -64,16 +75,15 @@ all-pycket-new-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs pycke
 
 .PHONY: pycket-new-with-warmup-jobs
 pycket-new-with-warmup-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --with-warmup $(DOCKER_IMAGE)
 
 .PHONY: pycket-new-no-warmup-jobs
 pycket-new-no-warmup-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --no-warmup $(DOCKER_IMAGE)
 
 .PHONY: pycket-new-traces-jobs
 pycket-new-traces-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t
-
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t $(DOCKER_IMAGE)
 
 # Pycket OLD jobs
 
@@ -82,21 +92,21 @@ all-pycket-old-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs pycke
 
 .PHONY: pycket-old-with-warmup-jobs
 pycket-old-with-warmup-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --with-warmup $(DOCKER_IMAGE)
 
 .PHONY: pycket-old-no-warmup-jobs
 pycket-old-no-warmup-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --no-warmup $(DOCKER_IMAGE)
 
 .PHONY: pycket-old-traces-jobs
 pycket-old-traces-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -t -j
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -t -j $(DOCKER_IMAGE)
 
 # Racket jobs
 
 .PHONY: all-racket-jobs
 all-racket-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -j
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -j $(DOCKER_IMAGE)
 
 # Utils
 
@@ -113,7 +123,7 @@ clean-scripts:
 
 .PHONY: clean-jobs
 clean-jobs:
-	rm -rf $(JOBS_DIR)/*.sh
+	rm -rf $(JOBS_DIR)/*.yaml
 
 .PHONY: clean-racket
 clean-racket:
