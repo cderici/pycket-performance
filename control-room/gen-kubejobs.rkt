@@ -242,19 +242,19 @@ spec:
 
   (command-line
    #:once-each
-   [("--scripts") "generate scripts" (set! gen-scripts #t)]
-   [("--jobs") "generate kubernetes jobs" (set! gen-jobs #t)]
+   [("-s" "--scripts") "generate scripts" (set! gen-scripts #t)]
+   [("-j" "--jobs") "generate kubernetes jobs" (set! gen-jobs #t)]
    #:once-any
-   [("--racket") "generate racket scripts" (set! pycket/racket "racket")]
-   [("--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
+   [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket")]
+   [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
    #;[("--run-all-script") "generate the run-all.sh script for the sh files in the directory" (set! sys 'runall-script)]
    #:once-any
-   [("--old") "old" (set! old/new "old")]
-   [("--new") "new" (set! old/new "new")]
+   [("-o" "--old") "old" (set! old/new "old")]
+   [("-n" "--new") "new" (set! old/new "new")]
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
-   [("--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! generate-traces? #t)]
+   [("-t" "--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! generate-traces? #t)]
    #:args ([docker-image #f])
 
   ;; Validate arguments
