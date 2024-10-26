@@ -3,9 +3,14 @@ all: all-racket-scripts all-pycket-scripts
 RACKET_EXECUTABLE := $(shell which racket)
 GENERATOR_SCRIPT := gen-kubejobs.rkt
 SCRIPTS_DIR := scripts
+JOBS_DIR := kubejobs
 
 .PHONY: all-pycket-scripts
 all-pycket-scripts: all-pycket-old-scripts all-pycket-new-scripts
+
+#################################################################
+########################## SCRIPTS ##############################
+#################################################################
 
 # Pycket NEW scripts
 
@@ -48,6 +53,50 @@ pycket-old-traces-scripts:
 all-racket-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -s
 
+#################################################################
+####################### KUBERNETES JOBS #########################
+#################################################################
+
+# Pycket NEW jobs
+
+.PHONY: all-pycket-new-jobs
+all-pycket-new-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs pycket-new-traces-jobs
+
+.PHONY: pycket-new-with-warmup-jobs
+pycket-new-with-warmup-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --with-warmup
+
+.PHONY: pycket-new-no-warmup-jobs
+pycket-new-no-warmup-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --no-warmup
+
+.PHONY: pycket-new-traces-jobs
+pycket-new-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t
+
+
+# Pycket OLD jobs
+
+.PHONY: all-pycket-old-jobs
+all-pycket-old-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs pycket-old-traces-jobs
+
+.PHONY: pycket-old-with-warmup-jobs
+pycket-old-with-warmup-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --with-warmup
+
+.PHONY: pycket-old-no-warmup-jobs
+pycket-old-no-warmup-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --no-warmup
+
+.PHONY: pycket-old-traces-jobs
+pycket-old-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -t -j
+
+# Racket jobs
+
+.PHONY: all-racket-jobs
+all-racket-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -j
 
 # Utils
 
@@ -56,17 +105,15 @@ activate:
 	chmod 755 $(SCRIPTS_DIR)/*.sh
 
 .PHONY: clean
-clean: clean-racket clean-pycket clean-tmps
-	rm -rf run-all.sh
-
-.PHONY: clean-tmps
-clean-tmps:
-	rm -rf *.sh.o*
-	rm -rf *~
+clean: clean-scripts clean-jobs
 
 .PHONY: clean-scripts
 clean-scripts:
-	rm -rf *.sh
+	rm -rf $(SCRIPTS_DIR)/*.sh
+
+.PHONY: clean-jobs
+clean-jobs:
+	rm -rf $(JOBS_DIR)/*.sh
 
 .PHONY: clean-racket
 clean-racket:
@@ -91,3 +138,8 @@ clean-with-warmup:
 .PHONY: clean-no-warmup
 clean-no-warmup:
 	rm -rf $(SCRIPTS_DIR)/*no-warmup*
+
+.PHONY: clean-tmps
+clean-tmps:
+	rm -rf *.sh.o*
+	rm -rf *~
