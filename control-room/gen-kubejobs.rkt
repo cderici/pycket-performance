@@ -2,7 +2,7 @@
 
 (provide benchmarks)
 
-#;(define benchmarks (list
+(define benchmarks (list
                       'ack
 		                  'array1
                       'cpstak
@@ -46,9 +46,6 @@
                       'mazefun
                       'simplex
                      ))
-
-(define benchmarks (list
-  'ack 'mbrot))
 
 
 ;; 1 - remove the logging, without the jit parameters
