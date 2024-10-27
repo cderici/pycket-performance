@@ -1,4 +1,4 @@
-all: all-racket all-pycket
+
 
 RACKET_EXECUTABLE := $(shell which racket)
 GENERATOR_SCRIPT := gen-kubejobs.rkt
@@ -7,12 +7,33 @@ JOBS_DIR := jobs
 DOCKER_IMAGE := canerderici/pycket-benchmark:latest
 
 
+NFS_SHARE := /mnt/nfs_share
+BENCHMARK_DIR := $(NFS_SHARE)/benchmarks
+SRC_TARGET_DIR	  := $(BENCHMARK_DIR)/scripts
+JOBS_TARGET_DIR  := $(BENCHMARK_DIR)/jobs
+
+#################################################################
+####################### TOP CONTROLS ############################
+#################################################################
+
+all: all-racket all-pycket stage-all
+
 .PHONY: all-pycket
 all-pycket: all-pycket-scripts all-pycket-jobs
 
 .PHONY: all-racket
 all-racket: all-racket-scripts all-racket-jobs
 
+.PHONY: stage-all
+stage-all: stage-scripts stage-jobs
+
+.PHONY: stage-scripts
+stage-scripts:
+	mv $(SCRIPTS_DIR)/*.sh $(SRC_TARGET_DIR)
+
+.PHONY: stage-jobs
+stage-jobs:
+	mv $(JOBS_DIR)/*.yaml $(JOBS_TARGET_DIR)
 
 #################################################################
 ########################## SCRIPTS ##############################
@@ -109,6 +130,17 @@ all-racket-jobs:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -j $(DOCKER_IMAGE)
 
 # Utils
+
+.PHONY: clean-benchmark-site
+clean-benchmark-site: clean-benchmark-site-scripts clean-benchmark-site-jobs
+
+.PHONY: clean-benchmark-site-scripts
+clean-benchmark-site-scripts:
+	rm -rf $(SRC_TARGET_DIR)/*.sh
+
+.PHONY: clean-benchmark-site-jobs
+clean-benchmark-site-jobs:
+	rm -rf $(JOBS_TARGET_DIR)/*.yaml
 
 .PHONY: activate
 activate:
