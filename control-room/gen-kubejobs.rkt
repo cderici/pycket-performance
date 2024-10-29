@@ -6,10 +6,10 @@
                       'ack
 		                  'array1
                       'cpstak
-                      'cta
+                      'ctak
                       'diviter
                       'divrec
-                      'ff
+                      'fft
                       ;'fibc
                       'fibfp
                       'fib
@@ -78,13 +78,13 @@ BENCH_DIR=$NFS_SHARE/benchmarks"])
     (if gen-traces?
       (format "~a
 TRACES_DIR=$BENCH_DIR/traces
-SOURCE_DIR=$NFS_SHARE/pycket-performance/src/for-traces
+SOURCE_DIR=$BENCH_DIR/src/for-traces
 OUTPUT_DIR=$BENCH_DIR/timings-traces
 BINARY_DIR=$PYCKET_DIR
 
 " base-pre)
       (format "~a
-SOURCE_DIR=$NFS_SHARE/pycket-performance/src/~a-warmup
+SOURCE_DIR=$BENCH_DIR/src/~a-warmup
 OUTPUT_DIR=$BENCH_DIR/timings-~a
 BINARY_DIR=~a
 
