@@ -31,7 +31,8 @@
           (wcport port)))))
 
 (define (go)
-  (set! inport (open-input-file "data/bib-wc"))
+  ;; FIXME: Avoid hardcoding the benchmark path, parameterize it.
+  (set! inport (open-input-file "/mnt/nfs_share/benchmarks/data/bib-wc"))
   (set! nl 0)
   (set! nw 0)
   (set! nc 0)
@@ -39,7 +40,7 @@
   (let ((result (wcport inport)))
     (close-input-port inport)
     result))
- 
+
 (define (main)
   (do ([i 1 (add1 i)])
       ((> i outer) (void))

@@ -164,7 +164,8 @@
         (FLOAT* (exact->inexact z) -400.0)
         40.0
         0.75)))
-  (tracer "data/spheres-rayray.pgm" (if (null? opt) 1 (car opt))))
+  ;; FIXME: Avoid hardcoding the benchmark path, parameterize it.
+  (tracer "/mnt/nfs_share/benchmarks/data/spheres-rayray.pgm" (if (null? opt) 1 (car opt))))
 
 (define (run)
   (ray-test 1)
