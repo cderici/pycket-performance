@@ -78,8 +78,8 @@ pycket-old-traces-scripts:
 
 # Racket scripts
 
-.PHONY: all-racket-scripts
-all-racket-scripts:
+.PHONY: racket-scripts
+racket-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -s
 
 #################################################################
@@ -125,8 +125,8 @@ pycket-old-traces-jobs:
 
 # Racket jobs
 
-.PHONY: all-racket-jobs
-all-racket-jobs:
+.PHONY: racket-jobs
+racket-jobs:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -j $(DOCKER_IMAGE)
 
 # Utils
