@@ -16,7 +16,7 @@
                       'gcbench
                       'mbrot
                       'nqueens
-                      'nucleic
+                      ; 'nucleic ;;;;; gotta debug
                       'paraffins
                       'pi
                       'pnpoly

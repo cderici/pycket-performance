@@ -22,7 +22,7 @@ all: all-racket all-pycket stage-all
 all-pycket: all-pycket-scripts all-pycket-jobs
 
 .PHONY: all-racket
-all-racket: all-racket-scripts all-racket-jobs
+all-racket: racket-scripts racket-jobs
 
 .PHONY: stage-all
 stage-all: stage-scripts stage-jobs
