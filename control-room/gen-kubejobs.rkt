@@ -47,6 +47,45 @@
                       'simplex
                      ))
 
+;; The default number of outer iterations for the benchmarks
+;; running with NO warmup (for loop in the script)
+(define OUTER-ITERATIONS 100)
+
+;; Some benchmarks need to run with different number
+;; of outer iterations when no-warmup (the for loop)
+;; Script generator will use this hash to override
+;; the default value (100)
+(define alternative-outer
+  #hash(('sumrec . 10)
+        ('gcold . 10)
+        ('sumloop . 10)
+        ('tak . 10)
+        ('ctak . 10)
+        ('takl . 10)
+        ('deriv . 10)
+        ('cpstak . 10)
+        ('fft . 10)
+        ('fib . 10)
+        ('nqueens . 10)
+        ('perm9 . 10)
+        ('pnpoly . 10)
+        ('gcbench . 10)
+        ('mazefun . 10)
+        ('primes . 10)
+        ('ack . 10)
+        ('diviter . 10)
+        ('divrec . 10)
+        ('fibfp . 10)
+        ('earley . 10)
+        ('graphs . 10)
+        ('paraffins . 10)
+        ('string . 10)
+        ('triangl . 10)
+        ('pi . 10)
+        ('array1 . 10)
+        ('sboyer . 10)
+        ('nboyer . 10))
+)
 
 ;; 1 - remove the logging, without the jit parameters
 ;; 2 - add the jit-parameters
@@ -114,15 +153,19 @@ BINARY_DIR=~a
         [time-output-file
           (if gen-traces?
             (format "~a-pycket-~a-traces.rst" pycket-variant bench-name)
-            (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))])
+            (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))]
+        [iterations
+          (if (hash-has-key? alternative-outer bench-name)
+              (hash-ref alternative-outer bench-name)
+              100)])
     (if (equal? with/no-warmup "no")
       ;; no warmup -- single run in a for loop
       (format "
-for i in `seq 1 100`;
+for i in `seq 1 ~a`;
 do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done\n\n
-" pycket-binary bench-name time-output-file)
+" iterations pycket-binary bench-name time-output-file)
 
       ;; with warmup -- multiple runs within the benchmark source
       (if gen-traces?
