@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 
+import types
+
 """
 This is for processing and plotting runtime duration results for benchmarks
 running Pycket and Racket. The benchmarks produce files containing arbitrarily many runtime durations expressed by the following triplets:
@@ -38,7 +40,8 @@ file name formats (ignores other files).
 It extracts the runtime for each benchmark and processes the durations (at the time of writing this, only takes the average), and plots the results using mathplotlib.
 """
 
-BENCH_FILE_REGEXP = r'(new|old|racket)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
+BENCH_FILE_PYCKET_REGEXP = r'(new|old)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
+BENCH_FILE_RACKET_REGEXP = 'racket-(.*?).rst'
 
 RESULT_CPU_REGEXP = r'RESULT-cpu:\s+([\d.]+)'
 RESULT_GC_REGEXP = r'RESULT-gc:\s+([\d.]+)'
@@ -76,50 +79,56 @@ def extract_benchmark_info(file_name):
 
     Returns:
         Three values for:
-            - pycket variant; can be "new" or "old"
+            - interpreter; "new" | "old" | "racket"
             - benchmark name
-            - warmup setting; can be "with" or "no"
+            - warmup setting; bool
     """
-    match = re.match(BENCH_FILE_REGEXP, file_name)
-    if match:
-        variant, benchmark_name, warmup = match.groups()
-        warmup = warmup if warmup else "with"  # Default to "with" if warmup info is missing
-        return variant, benchmark_name, warmup
+    if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
+        interpreter, benchmark_name, warmup = match.groups()
+        return interpreter, benchmark_name, warmup == "with"
+    elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
+        return "racket", match.group(1), False
+
     return None, None, None
 
-def process_directory(directory):
+def benchmark_data_ingress(directory):
     """Main entry for processing a directory containing benchmark results.
 
-    Returns:
-        Three level deep dict indexed by:
-            [warmup setting][benchmark_name][pycket variant]
-
-            - warmup setting; can be "with" or "no"
-            - pycket variant; can be "new" or "old"
+    Returns: BenchmarkCollection
     """
-    results = {"with": {}, "no": {}}
+    results = types.BenchmarkCollection()
 
     for filename in os.listdir(directory):
         if filename.endswith('.rst'):
             file_path = os.path.join(directory, filename)
-            variant, benchmark_name, warmup = extract_benchmark_info(filename)
-            if benchmark_name:
-                cpu_avg, gc_avg, total_avg = parse_benchmark_file(file_path)
-                if benchmark_name not in results[warmup]:
-                    results[warmup][benchmark_name] = {"new": {}, "old": {}, "racket": {}}
+            interpreter, benchmark_name, warmup = extract_benchmark_info(filename)
 
-                # Store the averages for the specific variant
-                results[warmup][benchmark_name][variant] = {
-                    "cpu": cpu_avg,
-                    "gc": gc_avg,
-                    "total": total_avg
-                }
+            if benchmark_name:
+                # Parse the file and extract the average runtime values
+                cpu_avg, gc_avg, total_avg = parse_benchmark_file(file_path)
+
+                # Create a BenchmarkResult object and add it to the collection
+                bResult = types.BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
+
+                results.add(bResult)
 
     return results
 
 def plot_results(results, warmup, category, ylabel, output_file):
     """Produces and saves a png file containing plots for the given results.
+
+    Args:
+        results is a three level deep dict indexed by:
+            [benchmark_name][pycket variant][category]
+
+            - pycket variant; can be "new" or "old"
+
+        warmup: "with" | "no"
+        category: "cpu" | "gc" | "total"
     """
+
+    # Sort benchmarks by runtime duration values in non-decreasing order
+
     benchmark_names = sorted(results.keys())
     new_avgs, old_avgs, racket_avgs = [], [], []
 
@@ -150,7 +159,7 @@ def main():
     parser.add_argument("directory", help="Path to the directory containing benchmark result files.")
     args = parser.parse_args()
 
-    results = process_directory(args.directory)
+    results = benchmark_data_ingress(args.directory)
 
     # Generate separate plots for each warmup type and runtime category
     for warmup in ["with", "no"]:
