@@ -49,12 +49,15 @@
 
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
-(define OUTER-ITERATIONS 100)
+(define OUTER-ITERATIONS 10)
 
 ;; Some benchmarks need to run with different number
 ;; of outer iterations when no-warmup (the for loop)
 ;; Script generator will use this hash to override
 ;; the default value (100)
+;; TODO (cderici - 11/4/2024): this should all go, no-warmup iteration default
+;; times should always be 10 (not 100) (because internally we're running them
+;; 10 times anyways, so 100 makes it to run 1000 times).
 (define alternative-outer
   #hash(('sumrec . 10)
         ('gcold . 10)
