@@ -4,10 +4,55 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 
+"""
+This is for processing and plotting runtime duration results for benchmarks
+running Pycket and Racket. The benchmarks produce files containing arbitrarily many runtime durations expressed by the following triplets:
+
+RESULT-cpu: 22676.0
+RESULT-gc: 10693.0
+RESULT-total: 170929.0
+...
+
+There can be some additional info printed in the files, some benchmarks produce
+output that's not relevant to the runtimes (those lines are ignored).
+
+The file names have two variations for Pycket and Racket.
+
+- Pycket benchmark files are formatted as follows:
+
+    (new|old)-pycket-[benchmark-name]-(with|no)-warmup.rst
+
+    e.g. "new-pycket-ack-with-warmup.rst", "old-pycket-ack-no-warmup.rst"
+
+ - Racket benchmark files are formatted as follows:
+
+    racket-[benchmark-name].rst
+
+    e.g. "racket-ack.rst"
+
+The general regexps used are below.
+
+The script takes a directory path and processes each file that conforms to the
+file name formats (ignores other files).
+
+It extracts the runtime for each benchmark and processes the durations (at the time of writing this, only takes the average), and plots the results using mathplotlib.
+"""
+
+BENCH_FILE_REGEXP = r'(new|old|racket)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
+
+RESULT_CPU_REGEXP = r'RESULT-cpu:\s+([\d.]+)'
+RESULT_GC_REGEXP = r'RESULT-gc:\s+([\d.]+)'
+RESULT_TOTAL_REGEXP = r'RESULT-total:\s+([\d.]+)'
+
 def parse_benchmark_file(file_path):
-    cpu_pattern = re.compile(r'RESULT-cpu:\s+([\d.]+)')
-    gc_pattern = re.compile(r'RESULT-gc:\s+([\d.]+)')
-    total_pattern = re.compile(r'RESULT-total:\s+([\d.]+)')
+    """Extracts runtime duration values from the given file path.
+
+    Returns:
+        Three values for cpu time, gc time, and total time. The values are averages of all triplets within the file.
+    """
+    cpu_pattern = re.compile(RESULT_CPU_REGEXP)
+    gc_pattern = re.compile(RESULT_GC_REGEXP)
+    total_pattern = re.compile(RESULT_TOTAL_REGEXP)
 
     cpu_times, gc_times, total_times = [], [], []
 
@@ -26,8 +71,16 @@ def parse_benchmark_file(file_path):
 
     return cpu_avg, gc_avg, total_avg
 
-def extract_benchmark_info(filename):
-    match = re.match(r'(new|old|racket)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst', filename)
+def extract_benchmark_info(file_name):
+    """Extract info from a given file name (see initial comment above for format info).
+
+    Returns:
+        Three values for:
+            - pycket variant; can be "new" or "old"
+            - benchmark name
+            - warmup setting; can be "with" or "no"
+    """
+    match = re.match(BENCH_FILE_REGEXP, file_name)
     if match:
         variant, benchmark_name, warmup = match.groups()
         warmup = warmup if warmup else "with"  # Default to "with" if warmup info is missing
@@ -35,6 +88,15 @@ def extract_benchmark_info(filename):
     return None, None, None
 
 def process_directory(directory):
+    """Main entry for processing a directory containing benchmark results.
+
+    Returns:
+        Three level deep dict indexed by:
+            [warmup setting][benchmark_name][pycket variant]
+
+            - warmup setting; can be "with" or "no"
+            - pycket variant; can be "new" or "old"
+    """
     results = {"with": {}, "no": {}}
 
     for filename in os.listdir(directory):
@@ -56,6 +118,8 @@ def process_directory(directory):
     return results
 
 def plot_results(results, warmup, category, ylabel, output_file):
+    """Produces and saves a png file containing plots for the given results.
+    """
     benchmark_names = sorted(results.keys())
     new_avgs, old_avgs, racket_avgs = [], [], []
 
@@ -65,7 +129,7 @@ def plot_results(results, warmup, category, ylabel, output_file):
         racket_avgs.append(results[bench]["racket"].get(category, 0))
 
     x = np.arange(len(benchmark_names))
-    width = 0.2
+    width = 0.5
 
     plt.figure(figsize=(12, 8))
     plt.bar(x - width, new_avgs, width, label="New", color="red")
