@@ -45,7 +45,41 @@ class BenchmarkCollection():
         """
         self.benchmarks.append(benchmark)
 
-    def compare(self, configs):
+    def _plot(self, _plot_config):
+        """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
+
+        Args:
+            _plot_config: dict
+                {
+                    benchmark_names: list of str,
+                    y_values: dict
+                            {
+                                label: str,
+                                values: list of float
+                            }
+                }
         """
-            Takes a list of CompareConfig objects and produces and saves a plot png file containing plots for the given configurations.
+
+    def _compare(self, configs):
         """
+            Produces plottable data for comparing each given configuration on a single plot.
+
+            Args:
+                configs: list of CompareConfig
+
+            Returns:
+                _plot_config: dict
+                {
+                    benchmark_names: list of str,
+                    y_values: dict
+                            {
+                                label: str,
+                                values: list of float
+                            }
+                }
+                Both benchmark_names and the inner list of y_values have the same lengths and order.
+                Values and benchmarks are sorted in non-decreasing order based on the runtime.
+        """
+
+    def compare_and_plot(self, configs):
+        return self._plot(self._compare(configs))
