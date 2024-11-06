@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 NEW_PYCKET = "New Pycket"
 OLD_PYCKET = "Old Pycket"
 RACKET = "Racket"
@@ -48,21 +51,6 @@ class BenchmarkCollection():
             benchmark: BenchmarkResult
         """
         self.benchmark_results_dict[f"{b_result.interpreter}_{b_result.name}_{b_result.with_warmup}"] = b_result
-
-    def _plot(self, _plot_config):
-        """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
-
-        Args:
-            _plot_config: dict
-                {
-                    benchmark_names: list of str,
-                    y_values: dict
-                            {
-                                label: str,
-                                values: list of float
-                            }
-                }
-        """
 
     def _pick_sort_config(self, configs):
         """Pick the configuration based on priority, which is new pycket, old pycket, racket. If there's multiple of the same pycket variant, pick the first one.
@@ -149,6 +137,34 @@ class BenchmarkCollection():
                 y_values[c.interpreter].append(self.benchmark_results_dict[b_label])
         return y_values
 
+    def _plot(self, benchmark_names, y_values, output_file):
+        """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
+
+        Args:
+            benchmark_names: list of str,
+            y_values: dict
+                    {
+                        label: str,
+                        values: list of float
+                    }
+        """
+        # Plot the data
+        plt.figure(figsize=(12, 8))
+        plt.title("Benchmark Comparison")
+        plt.xlabel("Benchmarks")
+        plt.ylabel("Runtime (s)")
+
+        x = np.arange(len(benchmark_names))
+        width = 0.2
+
+        for i, (label, values) in enumerate(y_values.items()):
+            plt.bar(x + i * width, values, width, label=label)
+
+        plt.xticks(x + width, benchmark_names)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(output_file)
+
     def _compare(self, configs):
         """
             Produces plottable data for comparing each given configuration on a single plot.
@@ -189,10 +205,8 @@ class BenchmarkCollection():
         # benchmark from the sorted list
         y_values = self._construct_y_values(sorted_benchmark_names, all_configs)
 
-        return {
-            "benchmark_names": sorted_benchmark_names,
-            "y_values": y_values
-        }
+        return sorted_benchmark_names, y_values
 
-    def compare_and_plot(self, configs):
-        return self._plot(self._compare(configs))
+    def plot(self, configs, output_file):
+        benchmark_names, y_values = self._compare(configs)
+        return self._plot(benchmark_names, y_values, output_file)
