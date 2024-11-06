@@ -108,6 +108,23 @@ class BenchmarkCollection():
                 filtered_benchmarks.append(b)
         return filtered_benchmarks
 
+    def _sort_benchmarks_for_config(self, benchmarks, config):
+        """Sorts the benchmarks based on the given configuration.
+
+        Args:
+            benchmarks: list of BenchmarkResult
+            config: CompareConfig
+
+        Returns:
+            list of BenchmarkResult
+        """
+        if config.category == "cpu":
+            return sorted(benchmarks, key=lambda b: b.cpu_value)
+        elif config.category == "gc":
+            return sorted(benchmarks, key=lambda b: b.gc_value)
+        else:
+            return sorted(benchmarks, key=lambda b: b.total_value)
+
     def _compare(self, configs):
         """
             Produces plottable data for comparing each given configuration on a single plot.
@@ -145,7 +162,7 @@ class BenchmarkCollection():
 
         # Then construct the y-values for other configurations, selecting the
         # benchmark from the sorted list
-        y_values = self._construct_y_values(sorted_benchmarks_for_sort_config, configs)
+        y_values = self._construct_y_values(sorted_benchmark_names, configs)
 
         return {
             "benchmark_names": sorted_benchmark_names,
