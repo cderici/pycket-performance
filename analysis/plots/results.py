@@ -65,7 +65,11 @@ class BenchmarkCollection():
         """
 
     def _pick_sort_config(self, configs):
-        """
+        """Pick the configuration based on priority, which is new pycket, old pycket, racket. If there's multiple of the same pycket variant, pick the first one.
+
+        Used by _compare to sort the benchmarks based on the selected configuration.
+        (e.g. I wanna see the New Pycket results in ascending order in the plot, sort the benchmarks based on the New Pycket results)
+
         Args:
             configs: list of CompareConfig
 
@@ -73,16 +77,21 @@ class BenchmarkCollection():
             sort_config: CompareConfig
             remaining_configs: list of CompareConfig
         """
-        # Benchmark sort order: new pycket, old pycket, racket
-        potential_old, potential_racket = None, None
-        for config in configs:
-            if config.interpreter == NEW_PYCKET:
-                return config, [c for c in configs if c != config]
-            elif not potential_old and config.interpreter == OLD_PYCKET:
-                potential_old = config
-            elif not potential_racket and config.interpreter == RACKET:
-                potential_racket = config
-        return potential_old or potential_racket
+
+        PRIORITY = [NEW_PYCKET, OLD_PYCKET, RACKET]
+
+        configs_to_choose = {}
+        for c in configs:
+            if PRIORITY[0] not in configs_to_choose and c.interpreter == PRIORITY[0]:
+                configs_to_choose[PRIORITY[0]] = c
+                break
+            elif PRIORITY[1] not in configs_to_choose and c.interpreter == PRIORITY[1]:
+                configs_to_choose[OLD_PYCKET] = c
+            elif PRIORITY[2] not in configs_to_choose and c.interpreter == PRIORITY[2]:
+                configs_to_choose[RACKET] = c
+        picked_config = configs_to_choose[PRIORITY[0]] if PRIORITY[0] in configs_to_choose else configs_to_choose[PRIORITY[1]] if PRIORITY[1] in configs_to_choose else configs_to_choose[PRIORITY[2]]
+
+        return picked_config, [c for c in configs if c != picked_config]
 
     def _compare(self, configs):
         """
