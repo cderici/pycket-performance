@@ -93,6 +93,21 @@ class BenchmarkCollection():
 
         return picked_config, [c for c in configs if c != picked_config]
 
+    def _filter_benchmarks_for(self, config):
+        """Filters the benchmarks for the given configuration.
+
+        Args:
+            config: CompareConfig
+
+        Returns:
+            list of BenchmarkResult
+        """
+        filtered_benchmarks = []
+        for b in self.benchmark_results:
+            if b.interpreter == config.interpreter and b.with_warmup == config.with_warmup:
+                filtered_benchmarks.append(b)
+        return filtered_benchmarks
+
     def _compare(self, configs):
         """
             Produces plottable data for comparing each given configuration on a single plot.
@@ -122,7 +137,9 @@ class BenchmarkCollection():
 
         # When found, pop it from configs, filter and sort the benchmarks for
         # the "sort" configuration
-        sorted_benchmarks_for_sort_config = self._filter_benchmarks_for(sort_config)
+        benchmarks_for_sort_config = self._filter_benchmarks_for(sort_config)
+
+        sorted_benchmarks_for_sort_config = self._sort_benchmarks_for_config(benchmarks_for_sort_config, sort_config)
 
         sorted_benchmark_names = [b.name for b in sorted_benchmarks_for_sort_config]
 
