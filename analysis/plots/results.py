@@ -1,3 +1,7 @@
+NEW_PYCKET = "New Pycket"
+OLD_PYCKET = "Old Pycket"
+RACKET = "Racket"
+
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
     """
@@ -5,7 +9,7 @@ class BenchmarkResult:
         """
         Args:
             benchmark_name: str
-            interpreter: str
+            interpreter: str, "New Pycket" | "Old Pycket" | "Racket"
             with_warmup: bool
             value: float
         """
@@ -36,14 +40,14 @@ class BenchmarkCollection():
         - compare(): to produce a plot comparing the benchmarks.
     """
     def __init__(self):
-        self.benchmarks = []
+        self.benchmark_results = []
 
     def add_benchmark(self, benchmark):
         """
         Args:
             benchmark: BenchmarkResult
         """
-        self.benchmarks.append(benchmark)
+        self.benchmark_results.append(benchmark)
 
     def _plot(self, _plot_config):
         """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
@@ -59,6 +63,26 @@ class BenchmarkCollection():
                             }
                 }
         """
+
+    def _pick_sort_config(self, configs):
+        """
+        Args:
+            configs: list of CompareConfig
+
+        Returns:
+            sort_config: CompareConfig
+            remaining_configs: list of CompareConfig
+        """
+        # Benchmark sort order: new pycket, old pycket, racket
+        potential_old, potential_racket = None, None
+        for config in configs:
+            if config.interpreter == NEW_PYCKET:
+                return config, [c for c in configs if c != config]
+            elif not potential_old and config.interpreter == OLD_PYCKET:
+                potential_old = config
+            elif not potential_racket and config.interpreter == RACKET:
+                potential_racket = config
+        return potential_old or potential_racket
 
     def _compare(self, configs):
         """
@@ -80,6 +104,27 @@ class BenchmarkCollection():
                 Both benchmark_names and the inner list of y_values have the same lengths and order.
                 Values and benchmarks are sorted in non-decreasing order based on the runtime.
         """
+        if len(self.benchmark_results) == 0:
+            raise ValueError("No benchmarks to compare.")
+
+        # Get the configuration that matches the sort order (i.e. look for new
+        # pycket first, then old pycket, then racket)
+        sort_config, configs = self._pick_sort_config(configs)
+
+        # When found, pop it from configs, filter and sort the benchmarks for
+        # the "sort" configuration
+        sorted_benchmarks_for_sort_config = self._filter_benchmarks_for(sort_config)
+
+        sorted_benchmark_names = [b.name for b in sorted_benchmarks_for_sort_config]
+
+        # Then construct the y-values for other configurations, selecting the
+        # benchmark from the sorted list
+        y_values = self._construct_y_values(sorted_benchmarks_for_sort_config, configs)
+
+        return {
+            "benchmark_names": sorted_benchmark_names,
+            "y_values": y_values
+        }
 
     def compare_and_plot(self, configs):
         return self._plot(self._compare(configs))
