@@ -110,7 +110,7 @@ def benchmark_data_ingress(directory):
                 # Create a BenchmarkResult object and add it to the collection
                 bResult = types.BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
 
-                results.add(bResult)
+                results.add_benchmark(bResult)
 
     return results
 

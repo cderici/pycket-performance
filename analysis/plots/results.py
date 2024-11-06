@@ -40,14 +40,14 @@ class BenchmarkCollection():
         - compare(): to produce a plot comparing the benchmarks.
     """
     def __init__(self):
-        self.benchmark_results = []
+        self.benchmark_results_dict = {}
 
-    def add_benchmark(self, benchmark):
+    def add_benchmark(self, b_result):
         """
         Args:
             benchmark: BenchmarkResult
         """
-        self.benchmark_results.append(benchmark)
+        self.benchmark_results_dict[f"{b_result.interpreter}_{b_result.name}_{b_result.with_warmup}"] = b_result
 
     def _plot(self, _plot_config):
         """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
@@ -103,27 +103,51 @@ class BenchmarkCollection():
             list of BenchmarkResult
         """
         filtered_benchmarks = []
-        for b in self.benchmark_results:
+        for _, b in self.benchmark_results_dict.items():
             if b.interpreter == config.interpreter and b.with_warmup == config.with_warmup:
                 filtered_benchmarks.append(b)
         return filtered_benchmarks
 
-    def _sort_benchmarks_for_config(self, benchmarks, config):
+    def _sort_benchmarks_for_config(self, benchmarks, category):
         """Sorts the benchmarks based on the given configuration.
 
         Args:
             benchmarks: list of BenchmarkResult
-            config: CompareConfig
+            category: "cpu" | "gc" | "total"
 
         Returns:
             list of BenchmarkResult
         """
-        if config.category == "cpu":
+        if category == "cpu":
             return sorted(benchmarks, key=lambda b: b.cpu_value)
-        elif config.category == "gc":
+        elif category == "gc":
             return sorted(benchmarks, key=lambda b: b.gc_value)
         else:
             return sorted(benchmarks, key=lambda b: b.total_value)
+
+    def _construct_y_values(self, sorted_benchmark_names, configs):
+        """Constructs the y-values for the given configurations.
+
+        Args:
+            sorted_benchmark_names: list of str
+            configs: list of CompareConfig
+
+        Returns:
+            dict
+            {
+                label: str,
+                values: list of float
+            }
+        """
+        y_values = {}
+        for c in configs:
+            y_values[c.interpreter] = []
+            for benchmark_name in sorted_benchmark_names:
+                b_label = f"{c.interpreter}_{benchmark_name}_{c.with_warmup}"
+                if b_label not in self.benchmark_results_dict:
+                    raise ValueError(f"Benchmark {b_label} not found.")
+                y_values[c.interpreter].append(self.benchmark_results_dict[b_label])
+        return y_values
 
     def _compare(self, configs):
         """
@@ -145,9 +169,10 @@ class BenchmarkCollection():
                 Both benchmark_names and the inner list of y_values have the same lengths and order.
                 Values and benchmarks are sorted in non-decreasing order based on the runtime.
         """
-        if len(self.benchmark_results) == 0:
+        if len(self.benchmark_results_dict) == 0:
             raise ValueError("No benchmarks to compare.")
 
+        all_configs = configs
         # Get the configuration that matches the sort order (i.e. look for new
         # pycket first, then old pycket, then racket)
         sort_config, configs = self._pick_sort_config(configs)
@@ -162,7 +187,7 @@ class BenchmarkCollection():
 
         # Then construct the y-values for other configurations, selecting the
         # benchmark from the sorted list
-        y_values = self._construct_y_values(sorted_benchmark_names, configs)
+        y_values = self._construct_y_values(sorted_benchmark_names, all_configs)
 
         return {
             "benchmark_names": sorted_benchmark_names,
