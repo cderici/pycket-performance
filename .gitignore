@@ -3,3 +3,4 @@ tmp/experiment-status_*
 *.sh.o*
 *~
 *.png
+*__pycache__*
