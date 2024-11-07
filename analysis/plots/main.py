@@ -185,8 +185,10 @@ def main():
         outfile_name += f"vs {interpreter} "
         configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type))
 
-    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup.png"
+    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup {args.category_type} times.png"
+    outfile_name = outfile_name.replace(" ", "_")
 
+    print("Collecting benchmark data...")
     benchmark_collection = benchmark_data_ingress(args.directory)
 
     benchmark_collection.plot(configs, outfile_name[3:])
