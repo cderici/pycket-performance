@@ -180,10 +180,16 @@ def main():
 
     # Generate CompareConfigs based on the given arguments
     configs = []
+    outfile_name = ""
     for interpreter in args.interpreters:
+        outfile_name += f"vs {interpreter} "
         configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type))
 
+    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup.png"
+
     benchmark_collection = benchmark_data_ingress(args.directory)
+
+    benchmark_collection.plot(configs, outfile_name[3:])
 
 if __name__ == "__main__":
     main()
