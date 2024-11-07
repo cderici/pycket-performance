@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import argparse
 
 from results import BenchmarkCollection, BenchmarkResult, \
-                    NEW_PYCKET, OLD_PYCKET, RACKET
+                    NEW_PYCKET, OLD_PYCKET, RACKET, \
+                    CompareConfig
 
 """
 This is for processing and plotting runtime duration results for benchmarks
@@ -98,7 +99,7 @@ def benchmark_data_ingress(directory):
 
     Returns: BenchmarkCollection
     """
-    results = BenchmarkCollection()
+    collection = BenchmarkCollection()
 
     for filename in os.listdir(directory):
         if filename.endswith('.rst'):
@@ -112,9 +113,9 @@ def benchmark_data_ingress(directory):
                 # Create a BenchmarkResult object and add it to the collection
                 bResult = BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
 
-                results.add_benchmark(bResult)
+                collection.add_benchmark(bResult)
 
-    return results
+    return collection
 
 def plot_results(results, warmup, category, ylabel, output_file):
     """Produces and saves a png file containing plots for the given results.
@@ -159,19 +160,30 @@ def plot_results(results, warmup, category, ylabel, output_file):
 def main():
     parser = argparse.ArgumentParser(description="Process benchmark results and generate plots.")
     parser.add_argument("directory", help="Path to the directory containing benchmark result files.")
+
+    interp_group = parser.add_argument_group()
+    interp_group.add_argument("--new", dest="interpreters", action="append_const", const=NEW_PYCKET, help="Include benchmarks for New Pycket.")
+    interp_group.add_argument("--old", dest="interpreters", action="append_const", const=OLD_PYCKET, help="Include benchmarks for Old Pycket.")
+    interp_group.add_argument("--racket", dest="interpreters", action="append_const", const=RACKET, help="Include benchmarks for Racket.")
+
+    warmup_group = parser.add_mutually_exclusive_group(required=True)
+    warmup_group.add_argument("--with-warmup", dest="warmup_type", action="store_true", help="Include only benchmarks with warmup.")
+    warmup_group.add_argument("--no-warmup", dest="warmup_type", action="store_false", help="Include only benchmarks without warmup.")
+
+    category_group = parser.add_mutually_exclusive_group()
+    category_group.add_argument("--cpu", dest="category_type", action="store_const", const="cpu", help="Use CPU time for benchmarks.")
+    category_group.add_argument("--gc", dest="category_type", action="store_const", const="gc", help="Use GC time for benchmarks.")
+    category_group.add_argument("--total", dest="category_type", action="store_const", const="total", help="Use total time for benchmarks.")
+    parser.set_defaults(category_type="total")
+
     args = parser.parse_args()
 
-    results = benchmark_data_ingress(args.directory)
+    # Generate CompareConfigs based on the given arguments
+    configs = []
+    for interpreter in args.interpreters:
+        configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type))
 
-    """
-    # Generate separate plots for each warmup type and runtime category
-    for warmup in ["with", "no"]:
-        if warmup in results:
-            plot_results(results[warmup], warmup, "cpu", "Average CPU Time (ms)", f"../average_cpu_times_{warmup}_warmup.png")
-            plot_results(results[warmup], warmup, "gc", "Average GC Time (ms)", f"../average_gc_times_{warmup}_warmup.png")
-            plot_results(results[warmup], warmup, "total", "Average Total Time (ms)", f"../average_total_times_{warmup}_warmup.png")
-            print(f"Plots saved for {warmup}-warmup: average_cpu_times_{warmup}_warmup.png, average_gc_times_{warmup}_warmup.png, average_total_times_{warmup}_warmup.png")
-    """
+    benchmark_collection = benchmark_data_ingress(args.directory)
 
 if __name__ == "__main__":
     main()
