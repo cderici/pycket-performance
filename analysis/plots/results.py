@@ -82,10 +82,16 @@ class BenchmarkCollection():
         self.benchmark_results_dict[b_label] = b_result
 
     def _pick_sort_config(self, configs):
-        """Pick the configuration based on priority, which is new pycket, old pycket, racket. If there's multiple of the same pycket variant, pick the first one.
+        """Pick the configuration based on priority, which is new pycket, old pycket, racket.
+        If there's multiple of the same pycket variant, pick the first one.
 
         Used by _compare to sort the benchmarks based on the selected configuration.
-        (e.g. I wanna see the New Pycket results in ascending order in the plot, sort the benchmarks based on the New Pycket results)
+        (e.g. I wanna see the New Pycket results in ascending order in the plot,
+        sort the benchmarks based on the New Pycket results)
+
+        One of the configurations might be a relative config (meaning the others will be
+        computed relative to that one). In that case, the values for that congiuration will
+        be set to 1, so don't pick that one as the sort configuration.
 
         Args:
             configs: list of CompareConfig
@@ -95,18 +101,28 @@ class BenchmarkCollection():
             remaining_configs: list of CompareConfig
         """
 
+        if len(configs) == 0:
+            raise ValueError("No configurations to compare.")
+
         PRIORITY = [NEW_PYCKET, OLD_PYCKET, RACKET]
 
-        configs_to_choose = {}
+        priority_picks = [None]*len(PRIORITY)
+        # Select a configuration based on priority
+        # Skip the relative config (see above comment)
+        # If the highest priority config is found, stop looking
+        # Keep an array for priority picks
         for c in configs:
-            if PRIORITY[0] not in configs_to_choose and c.interpreter == PRIORITY[0]:
-                configs_to_choose[PRIORITY[0]] = c
+            if c.interpreter == PRIORITY[0] and not c.relative:
+                # Found the highest priority config, stop looking
+                picked_config = c
                 break
-            elif PRIORITY[1] not in configs_to_choose and c.interpreter == PRIORITY[1]:
-                configs_to_choose[OLD_PYCKET] = c
-            elif PRIORITY[2] not in configs_to_choose and c.interpreter == PRIORITY[2]:
-                configs_to_choose[RACKET] = c
-        picked_config = configs_to_choose[PRIORITY[0]] if PRIORITY[0] in configs_to_choose else configs_to_choose[PRIORITY[1]] if PRIORITY[1] in configs_to_choose else configs_to_choose[PRIORITY[2]]
+            elif not priority_picks[1] and c.interpreter == PRIORITY[1] and not c.relative:
+                priority_picks[1] = c
+            elif not any(priority_picks) and c.interpreter == PRIORITY[2] and not c.relative:
+                priority_picks[2] = c
+
+        if not picked_config:
+            picked_config = priority_picks[1] or priority_picks[2]
 
         return picked_config, [c for c in configs if c != picked_config]
 
@@ -170,7 +186,7 @@ class BenchmarkCollection():
                 y_values[c.interpreter].append(b_result.get_value(c.category))
         return y_values
 
-    def _plot(self, benchmark_names, y_values, output_file):
+    def _plot(self, benchmark_names, y_values, output_file, relative_label=""):
         """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
 
         Args:
@@ -226,6 +242,9 @@ class BenchmarkCollection():
         if len(self.benchmark_results_dict) == 0:
             raise ValueError("No benchmarks to compare.")
 
+        if len(configs) == 0:
+            raise ValueError("No configurations to compare.")
+
         all_configs = configs
         # Get the configuration that matches the sort order (i.e. look for new
         # pycket first, then old pycket, then racket)
@@ -245,7 +264,11 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, configs, output_file):
+    def plot(self, configs, output_file, is_relative=False):
         print("Generating comparison plot data...")
-        benchmark_names, y_values = self._compare(configs)
-        return self._plot(benchmark_names, y_values, output_file)
+        relative_label = ""
+        if is_relative:
+            benchmark_names, y_values, relative_label = self._relative_compare(configs)
+        else:
+            benchmark_names, y_values = self._compare(configs)
+        return self._plot(benchmark_names, y_values, output_file, relative_label)
