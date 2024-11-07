@@ -24,7 +24,7 @@ class BenchmarkResult:
         self.cpu_value = cpu_value
         self.gc_value = gc_value
         self.total_value = total_value
-    
+
     def get_value(self, category):
         """Returns the value for the given category.
 
@@ -45,7 +45,7 @@ class BenchmarkResult:
         return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_value}, GC {self.gc_value}, Total {self.total_value}"
 
 class CompareConfig():
-    def __init__(self, interpreter, with_warmup, category="total"):
+    def __init__(self, interpreter, with_warmup, category="total", relative=False):
         """
         Args:
             interpreter: str
@@ -56,7 +56,8 @@ class CompareConfig():
         self.interpreter = interpreter
         self.with_warmup = with_warmup
         self.category = category
-    
+        self.relative = relative
+
     def __str__(self):
         return f"{self.interpreter} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
 

@@ -148,7 +148,9 @@ def main():
         parser.error("Please specify at least one interpreter to include in the comparison.")
 
     # If relative is set, make sure it's one of the interpreters that are given
+    relative_plot = False
     if args.relative:
+        relative_plot = True
         err = False
         # This is a bit hacky, but we have do it unless we want users to type
         # "New Pycket" instead of "new" on the command line
@@ -167,7 +169,8 @@ def main():
     outfile_name = ""
     for interpreter in args.interpreters:
         outfile_name += f"vs {interpreter} "
-        configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type))
+        relative = relative_plot and args.relative in interpreter.lower()
+        configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type, relative))
 
     outfile_name += f"{'with' if args.warmup_type else 'no'} warmup {args.category_type} times.png"
     outfile_name = outfile_name.replace(" ", "_")
@@ -175,7 +178,7 @@ def main():
     print("Collecting benchmark data...")
     benchmark_collection = benchmark_data_ingress(args.directory)
 
-    benchmark_collection.plot(configs, outfile_name[3:])
+    benchmark_collection.plot(configs, outfile_name[3:], relative_plot)
 
 if __name__ == "__main__":
     main()
