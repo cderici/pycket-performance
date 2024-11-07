@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+plt.style.use('ggplot')
+
 NEW_PYCKET = "New Pycket"
 OLD_PYCKET = "Old Pycket"
 RACKET = "Racket"
@@ -22,6 +24,25 @@ class BenchmarkResult:
         self.cpu_value = cpu_value
         self.gc_value = gc_value
         self.total_value = total_value
+    
+    def get_value(self, category):
+        """Returns the value for the given category.
+
+        Args:
+            category: str, "cpu" | "gc" | "total"
+
+        Returns:
+            float
+        """
+        if category == "cpu":
+            return self.cpu_value
+        elif category == "gc":
+            return self.gc_value
+        else:
+            return self.total_value
+
+    def __str__(self):
+        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_value}, GC {self.gc_value}, Total {self.total_value}"
 
 class CompareConfig():
     def __init__(self, interpreter, with_warmup, category="total"):
@@ -35,6 +56,9 @@ class CompareConfig():
         self.interpreter = interpreter
         self.with_warmup = with_warmup
         self.category = category
+    
+    def __str__(self):
+        return f"{self.interpreter} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
 
 class BenchmarkCollection():
     """Keeps a collection of BenchmarkResult objects, and knows how to sort, process, and analyse them.
@@ -50,7 +74,11 @@ class BenchmarkCollection():
         Args:
             benchmark: BenchmarkResult
         """
-        self.benchmark_results_dict[f"{b_result.interpreter}_{b_result.name}_{b_result.with_warmup}"] = b_result
+        if b_result.interpreter == RACKET:
+            b_label = f"{b_result.interpreter}_{b_result.name}"
+        else:
+            b_label = f"{b_result.interpreter}_{b_result.name}_{b_result.with_warmup}"
+        self.benchmark_results_dict[b_label] = b_result
 
     def _pick_sort_config(self, configs):
         """Pick the configuration based on priority, which is new pycket, old pycket, racket. If there's multiple of the same pycket variant, pick the first one.
@@ -131,10 +159,14 @@ class BenchmarkCollection():
         for c in configs:
             y_values[c.interpreter] = []
             for benchmark_name in sorted_benchmark_names:
-                b_label = f"{c.interpreter}_{benchmark_name}_{c.with_warmup}"
+                if c.interpreter == RACKET:
+                    b_label = f"{c.interpreter}_{benchmark_name}"
+                else:
+                    b_label = f"{c.interpreter}_{benchmark_name}_{c.with_warmup}"
                 if b_label not in self.benchmark_results_dict:
                     raise ValueError(f"Benchmark {b_label} not found.")
-                y_values[c.interpreter].append(self.benchmark_results_dict[b_label])
+                b_result = self.benchmark_results_dict[b_label]
+                y_values[c.interpreter].append(b_result.get_value(c.category))
         return y_values
 
     def _plot(self, benchmark_names, y_values, output_file):
@@ -150,19 +182,24 @@ class BenchmarkCollection():
         """
         # Plot the data
         plt.figure(figsize=(12, 8))
-        plt.title("Benchmark Comparison")
         plt.xlabel("Benchmarks")
-        plt.ylabel("Runtime (s)")
+        plt.ylabel("Runtime (ms)")
 
         x = np.arange(len(benchmark_names))
-        width = 0.2
+        width = 0.25
 
         for i, (label, values) in enumerate(y_values.items()):
-            plt.bar(x + i * width, values, width, label=label)
+            color = "red"
+            if OLD_PYCKET in label:
+                color = "green"
+            elif RACKET in label:
+                color = "blue"
+            plt.bar(x + i * width, values, width, label=label, color=color)
 
-        plt.xticks(x + width, benchmark_names)
+        plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
         plt.legend()
         plt.tight_layout()
+        print(f"Saving plot to {output_file}")
         plt.savefig(output_file)
 
     def _compare(self, configs):
@@ -208,5 +245,6 @@ class BenchmarkCollection():
         return sorted_benchmark_names, y_values
 
     def plot(self, configs, output_file):
+        print("Generating comparison plot data...")
         benchmark_names, y_values = self._compare(configs)
         return self._plot(benchmark_names, y_values, output_file)
