@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-plt.style.use('ggplot')
+plt.style.use('fivethirtyeight')
 
 NEW_PYCKET = "New Pycket"
 OLD_PYCKET = "Old Pycket"

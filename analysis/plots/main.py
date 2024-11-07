@@ -126,6 +126,7 @@ def main():
     interp_group.add_argument("--old", dest="interpreters", action="append_const", const=OLD_PYCKET, help="Include benchmarks for Old Pycket.")
     interp_group.add_argument("--racket", dest="interpreters", action="append_const", const=RACKET, help="Include benchmarks for Racket.")
 
+    # TODO (cderici - 11/7/2024): these are not mutually exclusive, we might wanna plot differente btw warmup vs no warmup
     warmup_group = parser.add_mutually_exclusive_group(required=True)
     warmup_group.add_argument("--with-warmup", dest="warmup_type", action="store_true", help="Include only benchmarks with warmup.")
     warmup_group.add_argument("--no-warmup", dest="warmup_type", action="store_false", help="Include only benchmarks without warmup.")
@@ -136,7 +137,30 @@ def main():
     category_group.add_argument("--total", dest="category_type", action="store_const", const="total", help="Use total time for benchmarks.")
     parser.set_defaults(category_type="total")
 
+    parser.add_argument("--relative", choices=["new", "old", "racket"], help="Set the relative baseline interpreter.")
+
     args = parser.parse_args()
+
+    # Check if at least one interpreter is specified
+    try:
+        len(args.interpreters)
+    except:
+        parser.error("Please specify at least one interpreter to include in the comparison.")
+
+    # If relative is set, make sure it's one of the interpreters that are given
+    if args.relative:
+        err = False
+        # This is a bit hacky, but we have do it unless we want users to type
+        # "New Pycket" instead of "new" on the command line
+        if "new" in args.relative and NEW_PYCKET not in args.interpreters:
+            err = True
+        elif "old" in args.relative and OLD_PYCKET not in args.interpreters:
+            err = True
+        elif "racket" in args.relative and RACKET not in args.interpreters:
+            err = True
+
+        if err:
+            parser.error("The relative interpreter must be one of the interpreters that are being compared.")
 
     # Generate CompareConfigs based on the given arguments
     configs = []
