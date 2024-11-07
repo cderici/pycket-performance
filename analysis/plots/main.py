@@ -4,7 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 
-import types
+from results import BenchmarkCollection, BenchmarkResult, \
+                    NEW_PYCKET, OLD_PYCKET, RACKET
 
 """
 This is for processing and plotting runtime duration results for benchmarks
@@ -85,9 +86,10 @@ def extract_benchmark_info(file_name):
     """
     if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
         interpreter, benchmark_name, warmup = match.groups()
-        return interpreter, benchmark_name, warmup == "with"
+        sys = NEW_PYCKET if interpreter == "new" else OLD_PYCKET
+        return sys, benchmark_name, warmup == "with"
     elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
-        return "racket", match.group(1), False
+        return RACKET, match.group(1), False
 
     return None, None, None
 
@@ -96,7 +98,7 @@ def benchmark_data_ingress(directory):
 
     Returns: BenchmarkCollection
     """
-    results = types.BenchmarkCollection()
+    results = BenchmarkCollection()
 
     for filename in os.listdir(directory):
         if filename.endswith('.rst'):
@@ -108,7 +110,7 @@ def benchmark_data_ingress(directory):
                 cpu_avg, gc_avg, total_avg = parse_benchmark_file(file_path)
 
                 # Create a BenchmarkResult object and add it to the collection
-                bResult = types.BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
+                bResult = BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
 
                 results.add_benchmark(bResult)
 
@@ -161,6 +163,7 @@ def main():
 
     results = benchmark_data_ingress(args.directory)
 
+    """
     # Generate separate plots for each warmup type and runtime category
     for warmup in ["with", "no"]:
         if warmup in results:
@@ -168,6 +171,7 @@ def main():
             plot_results(results[warmup], warmup, "gc", "Average GC Time (ms)", f"../average_gc_times_{warmup}_warmup.png")
             plot_results(results[warmup], warmup, "total", "Average Total Time (ms)", f"../average_total_times_{warmup}_warmup.png")
             print(f"Plots saved for {warmup}-warmup: average_cpu_times_{warmup}_warmup.png, average_gc_times_{warmup}_warmup.png, average_total_times_{warmup}_warmup.png")
+    """
 
 if __name__ == "__main__":
     main()
