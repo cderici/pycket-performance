@@ -117,46 +117,6 @@ def benchmark_data_ingress(directory):
 
     return collection
 
-def plot_results(results, warmup, category, ylabel, output_file):
-    """Produces and saves a png file containing plots for the given results.
-
-    Args:
-        results is a three level deep dict indexed by:
-            [benchmark_name][pycket variant][category]
-
-            - pycket variant; can be "new" or "old"
-
-        warmup: "with" | "no"
-        category: "cpu" | "gc" | "total"
-    """
-
-    # Sort benchmarks by runtime duration values in non-decreasing order
-
-    benchmark_names = sorted(results.keys())
-    new_avgs, old_avgs, racket_avgs = [], [], []
-
-    for bench in benchmark_names:
-        new_avgs.append(results[bench]["new"].get(category, 0))
-        old_avgs.append(results[bench]["old"].get(category, 0))
-        racket_avgs.append(results[bench]["racket"].get(category, 0))
-
-    x = np.arange(len(benchmark_names))
-    width = 0.5
-
-    plt.figure(figsize=(12, 8))
-    plt.bar(x - width, new_avgs, width, label="New", color="red")
-    plt.bar(x, old_avgs, width, label="Old", color="blue")
-    plt.bar(x + width, racket_avgs, width, label="Racket", color="magenta")
-
-    plt.xlabel("Benchmark")
-    plt.ylabel(ylabel)
-    plt.title(f"Average {category.upper()} Time per Benchmark ({warmup}-warmup)")
-    plt.xticks(x, benchmark_names, rotation=45, ha="right")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(output_file)
-    plt.close()
-
 def main():
     parser = argparse.ArgumentParser(description="Process benchmark results and generate plots.")
     parser.add_argument("directory", help="Path to the directory containing benchmark result files.")
