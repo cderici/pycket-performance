@@ -241,6 +241,10 @@ class BenchmarkCollection():
                 color = "blue"
             plt.bar(x + i * width, values, width, label=label, color=color)
 
+        if relative_label:
+            # Add a horizontal line for Racket baseline (normalized to 1)
+            plt.axhline(y=1, color="magenta", linestyle="--", label=relative_label)
+
         plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
         plt.legend()
         plt.tight_layout()
