@@ -109,6 +109,7 @@ class BenchmarkCollection():
         PRIORITY = [NEW_PYCKET, OLD_PYCKET, RACKET]
 
         priority_picks = [None]*len(PRIORITY)
+        picked_config = None
         # Select a configuration based on priority
         # Skip the relative config (see above comment)
         # If the highest priority config is found, stop looking
