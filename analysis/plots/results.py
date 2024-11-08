@@ -143,24 +143,43 @@ class BenchmarkCollection():
                 filtered_benchmarks.append(b)
         return filtered_benchmarks
 
-    def _sort_benchmarks_for_config(self, benchmarks, category):
-        """Sorts the benchmarks based on the given configuration.
+    def _sort_y_values(self, benchmark_names, y_values, sort_config):
+        """Sorts the y-values (and the benchmark_names) based on the sort_config for the plot.
 
         Args:
-            benchmarks: list of BenchmarkResult
-            category: "cpu" | "gc" | "total"
-
+            benchmark_names: list of str
+            y_values: dict
+                    {
+                        label: str (config.interpreter),
+                        values: list of float
+                    }
+            sort_config: CompareConfig
         Returns:
-            list of BenchmarkResult
+            sorted_benchmark_names: list of str
+            sorted_y_values: dict
+                    {
+                        label: str (config.interpreter),
+                        values: list of float
+                    }
         """
-        if category == "cpu":
-            return sorted(benchmarks, key=lambda b: b.cpu_value)
-        elif category == "gc":
-            return sorted(benchmarks, key=lambda b: b.gc_value)
-        else:
-            return sorted(benchmarks, key=lambda b: b.total_value)
+        # Pick the y-values for the sort config, which will determine the order
+        # that all y-values will use to be sorted.
+        sort_values = y_values[sort_config.interpreter]
+        sorted_indices = sorted(range(len(sort_values)), key=lambda x: sort_values[x])
 
-    def _construct_y_values(self, sorted_benchmark_names, configs, rel_config=None):
+        # sort the y-values for each config based on the sort indices (that are
+        # computed based on the sort config)
+        # TODO (cderici): It's not ideal to sort the y-values for the sort
+        # config again
+        for interp in y_values:
+            y_values[interp] = [y_values[interp][i] for i in sorted_indices]
+
+        # Sort the benchmark names based on the sort indices
+        sorted_benchmark_names = [benchmark_names[i] for i in sorted_indices]
+
+        return sorted_benchmark_names, y_values
+
+    def _construct_y_values(self, benchmark_names, configs, rel_config=None):
         """Constructs the y-values for the given configurations.
 
         If any of the given configs is marked as a relative config, then the
@@ -184,7 +203,7 @@ class BenchmarkCollection():
             y_values[c.interpreter] = []
             # For each benchmark in the sorted names list, get the value for the
             # given configuration and append it to the y-values list
-            for benchmark_name in sorted_benchmark_names:
+            for benchmark_name in benchmark_names:
 
                 # Label to index the benchmark collection
                 b_label = self._get_b_label(c.interpreter, benchmark_name, c.with_warmup)
@@ -284,15 +303,15 @@ class BenchmarkCollection():
 
         # When found, pop it from configs, filter and sort the benchmarks for
         # the "sort" configuration
-        benchmarks_for_sort_config = self._filter_benchmarks_for(sort_config)
-
-        sorted_benchmarks_for_sort_config = self._sort_benchmarks_for_config(benchmarks_for_sort_config, sort_config.category)
-
-        sorted_benchmark_names = [b.name for b in sorted_benchmarks_for_sort_config]
+        benchmarks = self._filter_benchmarks_for(sort_config)
+        benchmark_names = [b.name for b in benchmarks]
 
         # Then construct the y-values for other configurations, selecting the
-        # benchmark from the sorted list
-        y_values = self._construct_y_values(sorted_benchmark_names, all_configs, rel_config)
+        # benchmark name from the benchmark names list
+        y_values = self._construct_y_values(benchmark_names, all_configs, rel_config)
+
+        # Sort the y_values based on the sort_config info
+        sorted_benchmark_names, y_values = self._sort_y_values(benchmark_names, y_values, sort_config)
 
         return sorted_benchmark_names, y_values
 
