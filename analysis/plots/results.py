@@ -243,7 +243,7 @@ class BenchmarkCollection():
 
         if relative_label:
             # Add a horizontal line for Racket baseline (normalized to 1)
-            plt.axhline(y=1, color="magenta", linestyle="--", label=relative_label)
+            plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=relative_label)
 
         plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
         plt.legend()

@@ -172,8 +172,11 @@ def main():
         relative = relative_plot and args.relative in interpreter.lower()
         configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type, relative))
 
-    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup {args.category_type} times.png"
+    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup {args.category_type} times"
+    if relative_plot:
+        outfile_name += f" relative to {args.relative}"
     outfile_name = outfile_name.replace(" ", "_")
+    outfile_name += ".png"
 
     print("Collecting benchmark data...")
     benchmark_collection = benchmark_data_ingress(args.directory)
