@@ -286,7 +286,7 @@ class BenchmarkCollection():
         # the "sort" configuration
         benchmarks_for_sort_config = self._filter_benchmarks_for(sort_config)
 
-        sorted_benchmarks_for_sort_config = self._sort_benchmarks_for_config(benchmarks_for_sort_config, sort_config)
+        sorted_benchmarks_for_sort_config = self._sort_benchmarks_for_config(benchmarks_for_sort_config, sort_config.category)
 
         sorted_benchmark_names = [b.name for b in sorted_benchmarks_for_sort_config]
 
