@@ -126,10 +126,10 @@ def main():
     interp_group.add_argument("--old", dest="interpreters", action="append_const", const=OLD_PYCKET, help="Include benchmarks for Old Pycket.")
     interp_group.add_argument("--racket", dest="interpreters", action="append_const", const=RACKET, help="Include benchmarks for Racket.")
 
-    # TODO (cderici - 11/7/2024): these are not mutually exclusive, we might wanna plot differente btw warmup vs no warmup
-    warmup_group = parser.add_mutually_exclusive_group(required=True)
-    warmup_group.add_argument("--with-warmup", dest="warmup_type", action="store_true", help="Include only benchmarks with warmup.")
-    warmup_group.add_argument("--no-warmup", dest="warmup_type", action="store_false", help="Include only benchmarks without warmup.")
+    warmup_group = parser.add_argument_group()
+    warmup_group.add_argument("--with-warmup", dest="with_warmup", action="store_true", help="Include only benchmarks with warmup.")
+    warmup_group.add_argument("--no-warmup", dest="no_warmup", action="store_true", help="Include only benchmarks without warmup.")
+    parser.set_defaults(with_warmup=False, no_warmup=False)
 
     category_group = parser.add_mutually_exclusive_group()
     category_group.add_argument("--cpu", dest="category_type", action="store_const", const="cpu", help="Use CPU time for benchmarks.")
@@ -168,11 +168,25 @@ def main():
     configs = []
     outfile_name = ""
     for interpreter in args.interpreters:
-        outfile_name += f"vs {interpreter} "
         relative = relative_plot and args.relative in interpreter.lower()
-        configs.append(CompareConfig(interpreter, args.warmup_type, args.category_type, relative))
 
-    outfile_name += f"{'with' if args.warmup_type else 'no'} warmup {args.category_type} times"
+        if args.with_warmup:
+            outfile_name += f"vs {interpreter} with warmup "
+            configs.append(CompareConfig(interpreter, True, args.category_type, relative))
+
+        if args.no_warmup:
+            outfile_name += f"vs {interpreter} no warmup "
+            configs.append(CompareConfig(interpreter, False, args.category_type, relative))
+
+    """
+    if args.with_warmup and args.no_warmup:
+        outfile_name += f"mixed warmup"
+    else:
+        outfile_name += f"{'with' if args.with_warmup else 'no'} warmup"
+    """
+
+    outfile_name += f"{args.category_type} times"
+
     if relative_plot:
         outfile_name += f" relative to {args.relative}"
     outfile_name = outfile_name.replace(" ", "_")
