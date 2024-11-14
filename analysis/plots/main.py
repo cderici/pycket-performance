@@ -6,7 +6,7 @@ import argparse
 
 from results import BenchmarkCollection, BenchmarkResult, \
                     NEW_PYCKET, OLD_PYCKET, RACKET, \
-                    CompareConfig
+                    CompareConfig, BenchmarkIngress
 
 """
 This is for processing and plotting runtime duration results for benchmarks
@@ -41,81 +41,6 @@ file name formats (ignores other files).
 
 It extracts the runtime for each benchmark and processes the durations (at the time of writing this, only takes the average), and plots the results using mathplotlib.
 """
-
-BENCH_FILE_PYCKET_REGEXP = r'(new|old)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
-BENCH_FILE_RACKET_REGEXP = 'racket-(.*?).rst'
-
-RESULT_CPU_REGEXP = r'RESULT-cpu:\s+([\d.]+)'
-RESULT_GC_REGEXP = r'RESULT-gc:\s+([\d.]+)'
-RESULT_TOTAL_REGEXP = r'RESULT-total:\s+([\d.]+)'
-
-def parse_benchmark_file(file_path):
-    """Extracts runtime duration values from the given file path.
-
-    Returns:
-        Three values for cpu time, gc time, and total time. The values are averages of all triplets within the file.
-    """
-    cpu_pattern = re.compile(RESULT_CPU_REGEXP)
-    gc_pattern = re.compile(RESULT_GC_REGEXP)
-    total_pattern = re.compile(RESULT_TOTAL_REGEXP)
-
-    cpu_times, gc_times, total_times = [], [], []
-
-    with open(file_path, 'r') as f:
-        for line in f:
-            if cpu_match := cpu_pattern.search(line):
-                cpu_times.append(float(cpu_match.group(1)))
-            elif gc_match := gc_pattern.search(line):
-                gc_times.append(float(gc_match.group(1)))
-            elif total_match := total_pattern.search(line):
-                total_times.append(float(total_match.group(1)))
-
-    cpu_avg = np.mean(cpu_times) if cpu_times else 0
-    gc_avg = np.mean(gc_times) if gc_times else 0
-    total_avg = np.mean(total_times) if total_times else 0
-
-    return cpu_avg, gc_avg, total_avg
-
-def extract_benchmark_info(file_name):
-    """Extract info from a given file name (see initial comment above for format info).
-
-    Returns:
-        Three values for:
-            - interpreter; "new" | "old" | "racket"
-            - benchmark name
-            - warmup setting; bool
-    """
-    if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
-        interpreter, benchmark_name, warmup = match.groups()
-        sys = NEW_PYCKET if interpreter == "new" else OLD_PYCKET
-        return sys, benchmark_name, warmup == "with"
-    elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
-        return RACKET, match.group(1), False
-
-    return None, None, None
-
-def benchmark_data_ingress(directory):
-    """Main entry for processing a directory containing benchmark results.
-
-    Returns: BenchmarkCollection
-    """
-    collection = BenchmarkCollection()
-
-    for filename in os.listdir(directory):
-        if filename.endswith('.rst'):
-            file_path = os.path.join(directory, filename)
-            interpreter, benchmark_name, warmup = extract_benchmark_info(filename)
-
-            if benchmark_name:
-                # Parse the file and extract the average runtime values
-                cpu_avg, gc_avg, total_avg = parse_benchmark_file(file_path)
-
-                # Create a BenchmarkResult object and add it to the collection
-                bResult = BenchmarkResult(benchmark_name, interpreter, warmup, cpu_avg, gc_avg, total_avg)
-
-                collection.add_benchmark(bResult)
-
-    return collection
 
 def main():
     parser = argparse.ArgumentParser(description="Process benchmark results and generate plots.")
@@ -192,8 +117,7 @@ def main():
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name += ".png"
 
-    print("Collecting benchmark data...")
-    benchmark_collection = benchmark_data_ingress(args.directory)
+    benchmark_collection = BenchmarkIngress(args.directory).consume_create_collection()
 
     benchmark_collection.plot(configs, outfile_name[3:], relative_plot)
 

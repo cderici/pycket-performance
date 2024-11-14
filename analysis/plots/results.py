@@ -1,12 +1,126 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import random
+import os, re
 
 plt.style.use('fivethirtyeight')
 
 NEW_PYCKET = "New Pycket"
 OLD_PYCKET = "Old Pycket"
 RACKET = "Racket"
+
+BENCH_FILE_PYCKET_REGEXP = r'(new|old)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
+BENCH_FILE_RACKET_REGEXP = 'racket-(.*?).rst'
+
+RESULT_CPU_REGEXP = r'RESULT-cpu:\s+([\d.]+)'
+RESULT_GC_REGEXP = r'RESULT-gc:\s+([\d.]+)'
+RESULT_TOTAL_REGEXP = r'RESULT-total:\s+([\d.]+)'
+
+class BenchmarkIngress:
+    """Processes the benchmark file and extracts the runtime durations from it.
+    """
+    def __init__(self, directory_path):
+        """
+        Args:
+            directory_path: str
+        """
+        self.directorys = directory_path
+
+    def _parse_and_extract(self, file_path):
+        """Extracts runtime duration values from the given file path.
+
+        Returns:
+            Three values for cpu time, gc time, and total time. The values are averages of all triplets within the file.
+        """
+        cpu_pattern = re.compile(RESULT_CPU_REGEXP)
+        gc_pattern = re.compile(RESULT_GC_REGEXP)
+        total_pattern = re.compile(RESULT_TOTAL_REGEXP)
+
+        cpu_times, gc_times, total_times = [], [], []
+
+        with open(file_path, 'r') as f:
+            for line in f:
+                if cpu_match := cpu_pattern.search(line):
+                    cpu_times.append(float(cpu_match.group(1)))
+                elif gc_match := gc_pattern.search(line):
+                    gc_times.append(float(gc_match.group(1)))
+                elif total_match := total_pattern.search(line):
+                    total_times.append(float(total_match.group(1)))
+
+        return cpu_times, gc_times, total_times
+
+    def _analyze_filename(self, file_name):
+        """Extract info from a given file name (see initial comment above for format info).
+
+        Returns:
+            Three values for:
+                - interpreter; "new" | "old" | "racket"
+                - benchmark name
+                - warmup setting; bool
+        """
+        if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
+            interpreter, benchmark_name, warmup = match.groups()
+            sys = NEW_PYCKET if interpreter == "new" else OLD_PYCKET
+            return sys, benchmark_name, warmup == "with"
+        elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
+            return RACKET, match.group(1), False
+
+        return None, None, None
+
+    def _analyze_ingress(self, cpu_times, gc_times, total_times, is_with_warmup):
+        """Analyzes the extracted runtime values and returns a representative value for each category (e.g. arithmetic mean if no warmup).
+
+        If warmup is enabled, we'll use the average of the fastest 10 runs.
+
+        Args:
+            cpu_times: list of float
+            gc_times: list of float
+            total_times: list of float
+            is_with_warmup: bool
+
+        Returns:
+            Three float values for cpu time, gc time, and total time.
+        """
+        if not is_with_warmup:
+            cpu_val = np.mean(cpu_times) if cpu_times else 0
+            gc_val = np.mean(gc_times) if gc_times else 0
+            total_val = np.mean(total_times) if total_times else 0
+        else:
+            # If warmup is enabled, we'll use the average of the fastest 10 runs.
+            cpu_val = np.mean(sorted(cpu_times)[:10]) if cpu_times else 0
+            gc_val = np.mean(sorted(gc_times)[:10]) if gc_times else 0
+            total_val = np.mean(sorted(total_times)[:10]) if total_times else 0
+
+        return cpu_val, gc_val, total_val
+
+    def consume_create_collection(self):
+        """Consumes the benchmark data from the directory path and produces a BenchmarkCollection object.
+
+        Main entry for processing a directory containing benchmark results.
+
+        Returns:
+            BenchmarkCollection
+        """
+        print("Collecting benchmark data...")
+        collection = BenchmarkCollection()
+
+        for filename in os.listdir(self.directory):
+            if filename.endswith('.rst'):
+                file_path = os.path.join(self.directory, filename)
+                interpreter, benchmark_name, is_with_warmup = self._analyze_filename(filename)
+
+                if benchmark_name:
+                    # Parse the file and extract the average runtime values
+                    cpu_times, gc_times, total_times = self._parse_and_extract(file_path)
+
+                    cpu_val, gc_val, total_val = self._analyze_ingress(cpu_times, gc_times, total_times, is_with_warmup)
+
+                    # Create a BenchmarkResult object and add it to the collection
+                    bResult = BenchmarkResult(benchmark_name, interpreter, is_with_warmup, cpu_val, gc_val, total_val)
+
+                    collection.add_benchmark(bResult)
+
+        return collection
+
 
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
