@@ -195,6 +195,7 @@ class BenchmarkCollection():
     """
     def __init__(self):
         self.benchmark_results_dict = {}
+        self.benchmark_names = {}
 
     def add_benchmark(self, b_result):
         """
@@ -203,6 +204,8 @@ class BenchmarkCollection():
         """
         b_label = self._get_b_label(b_result.interpreter, b_result.name, b_result.with_warmup)
         self.benchmark_results_dict[b_label] = b_result
+
+        self.benchmark_names[b_result.name] = None
 
     def _get_b_label(self, interpreter, benchmark_name, with_warmup):
         if interpreter == RACKET:
@@ -589,7 +592,7 @@ class BenchmarkCollection():
         return sorted_benchmark_names, y_values
 
     def plot(self, _configs, output_file, is_relative=False, single_benchmark_name=None):
-        print("Generating comparison plot data...")
+        print(f"Generating comparison plot data for {output_file}...")
         rel_config_plot_label = ""
         rel_config = None
 

@@ -52,3 +52,7 @@ new-vs-old-vs-racket-no-warmup:
 .PHONY: clean
 clean:
 	rm -rf *.png
+
+.PHONY: all-singles
+all-singles:
+	$(PYTHON) main.py $(DIR) --single all

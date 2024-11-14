@@ -63,13 +63,13 @@ def main():
     parser.set_defaults(category_type="total")
 
     parser.add_argument("--relative", choices=["new", "old", "racket"], help="Set the relative baseline interpreter.")
-    parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects.")
+    parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects. Use \"all\" for producing plots for all benchmarks.")
 
     args = parser.parse_args()
 
-    b_name = args.single_benchmark_name
+    b_param = args.single_benchmark_name
 
-    if b_name:
+    if b_param:
         args.interpreters = [NEW_PYCKET, OLD_PYCKET, RACKET]
         args.with_warmup = True
         args.no_warmup = True
@@ -118,16 +118,20 @@ def main():
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name += ".png"
 
-    if b_name:
+    if b_param:
         # Check the singles dir, and create if it doesn't exist
         if not os.path.exists("singles"):
             os.makedirs("singles")
 
-        outfile_name = f"singles/{b_name}.png"
+        outfile_name = f"singles/{b_param}.png"
     else:
         outfile_name = outfile_name[3:]
 
     benchmark_collection = BenchmarkIngress(args.directory).consume_create_collection()
+
+    if b_param == "all":
+        for b_name in benchmark_collection.benchmark_names:
+            benchmark_collection.plot(configs, f"singles/{b_name}.png", relative_plot, b_name)
 
     benchmark_collection.plot(configs, outfile_name, relative_plot, args.single_benchmark_name)
 
