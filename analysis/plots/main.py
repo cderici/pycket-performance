@@ -63,21 +63,22 @@ def main():
     parser.set_defaults(category_type="total")
 
     parser.add_argument("--relative", choices=["new", "old", "racket"], help="Set the relative baseline interpreter.")
-    parser.add_argument("--singles", action="store_const", dest="single_benchmark_name", help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects.")
-    parser.set_defaults(single_benchmark_name=None)
+    parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects.")
 
     args = parser.parse_args()
+
+    b_name = args.single_benchmark_name
+
+    if b_name:
+        args.interpreters = [NEW_PYCKET, OLD_PYCKET, RACKET]
+        args.with_warmup = True
+        args.no_warmup = True
 
     # Check if at least one interpreter is specified
     try:
         len(args.interpreters)
     except:
         parser.error("Please specify at least one interpreter to include in the comparison.")
-
-    if args.single_benchmark_name:
-        args.interpreters = [NEW_PYCKET, OLD_PYCKET, RACKET]
-        args.with_warmup = True
-        args.no_warmup = True
 
     # If relative is set, make sure it's one of the interpreters that are given
     relative_plot = False
@@ -117,12 +118,18 @@ def main():
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name += ".png"
 
-    if args.single_benchmark_name:
-        outfile_name = f"{args.single_benchmark_name}.png"
+    if b_name:
+        # Check the singles dir, and create if it doesn't exist
+        if not os.path.exists("singles"):
+            os.makedirs("singles")
+
+        outfile_name = f"singles/{b_name}.png"
+    else:
+        outfile_name = outfile_name[3:]
 
     benchmark_collection = BenchmarkIngress(args.directory).consume_create_collection()
 
-    benchmark_collection.plot(configs, outfile_name[3:], relative_plot, args.single_benchmark_name)
+    benchmark_collection.plot(configs, outfile_name, relative_plot, args.single_benchmark_name)
 
 if __name__ == "__main__":
     main()
