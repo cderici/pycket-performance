@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 plt.style.use('fivethirtyeight')
 
@@ -83,6 +84,9 @@ class BenchmarkCollection():
             return f"{interpreter}_{benchmark_name}"
         return f"{interpreter}_{benchmark_name}_{with_warmup}"
 
+    def _get_y_label(self, config):
+        return f"{config.interpreter} {'With' if config.with_warmup else 'No'} Warmup"
+
     def _pick_sort_config(self, configs):
         """Pick the configuration based on priority, which is new pycket, old pycket, racket.
         If there's multiple of the same pycket variant, pick the first one.
@@ -165,7 +169,7 @@ class BenchmarkCollection():
         """
         # Pick the y-values for the sort config, which will determine the order
         # that all y-values will use to be sorted.
-        sort_values = y_values[sort_config.interpreter]
+        sort_values = y_values[self._get_y_label(sort_config)]
         sorted_indices = sorted(range(len(sort_values)), key=lambda x: sort_values[x])
 
         # sort the y-values for each config based on the sort indices (that are
@@ -201,7 +205,7 @@ class BenchmarkCollection():
         # We'll create an entry for each config, containing label and y-values
         # to be plotted
         for c in configs:
-            y_values[c.interpreter] = []
+            y_values[self._get_y_label(c)] = []
             # For each benchmark in the sorted names list, get the value for the
             # given configuration and append it to the y-values list
             for benchmark_name in benchmark_names:
@@ -231,7 +235,7 @@ class BenchmarkCollection():
                     y_value = raw_value
 
                 # Append the value to the y-values list of the configuration
-                y_values[c.interpreter].append(y_value)
+                y_values[self._get_y_label(c)].append(y_value)
         return y_values
 
     def _plot(self, benchmark_names, y_values, output_file, relative_label=""):
@@ -247,19 +251,24 @@ class BenchmarkCollection():
         """
         # Plot the data
         plt.figure(figsize=(12, 8))
-        plt.xlabel("Benchmarks")
+        # Prepare a caption using output_file
+        caption = output_file.replace("_", " ")[:-4]
+        plt.xlabel(caption)
         plt.ylabel("Runtime (ms)")
 
         x = np.arange(len(benchmark_names))
         width = 0.25
 
+        cmap = plt.cm.get_cmap('hsv', 50)
         for i, (label, values) in enumerate(y_values.items()):
+            """
             color = "red"
             if OLD_PYCKET in label:
                 color = "green"
             elif RACKET in label:
                 color = "blue"
-            plt.bar(x + i * width, values, width, label=label, color=color)
+            """
+            plt.bar(x + i * width, values, width, label=label, color=cmap(i*(50//len(y_values))))
 
         if relative_label:
             # Add a horizontal line for Racket baseline (normalized to 1)
