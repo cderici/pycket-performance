@@ -1,6 +1,8 @@
+import os, re
+
 import numpy as np
 import matplotlib.pyplot as plt
-import os, re
+from scipy.interpolate import make_interp_spline
 
 plt.style.use('fivethirtyeight')
 
@@ -23,7 +25,7 @@ class BenchmarkIngress:
         Args:
             directory_path: str
         """
-        self.directorys = directory_path
+        self.directory = directory_path
 
     def _parse_and_extract(self, file_path):
         """Extracts runtime duration values from the given file path.
@@ -362,8 +364,74 @@ class BenchmarkCollection():
                 y_values[self._get_y_label(c)].append(y_value)
         return y_values
 
+    def _plot_single_benchmark(self, single_benchmark_name, y_values, output_file, relative_label=""):
+        """Plots the given plottable benchmark data produced by the _compare_on_single_benchmark() method and saves it to a png file.
+
+        This is a line plot, where each configuration has a line for the benchmark, x-axis is the number of iterations.
+
+        Args:
+            single_benchmark_name: str
+            y_values: dict
+                    {
+                        label: str,
+                        values: list of float
+                    }
+
+        e.g. y_values looks like this:
+            (recall that this is for a single benchmark)
+
+                                      single_benchmark_name: ack
+            {
+                NewPWithWarmup   [1.0, 1.2, 1.1, ...],
+                OldPWithWarmup   [1.5, 1.6, 1.7, ..., ..., ...],
+                Racket           [2.0, 2.1, 2.2, ...]
+            }
+            (Note that the lengths of the lists can be different)
+        """
+
+        # Plot the data
+        plt.figure(figsize=(12, 8))
+        # Prepare a caption using output_file
+        caption = output_file.replace("_", " ")[:-4]
+        plt.title(caption)
+        plt.xlabel("Iterations")
+        plt.ylabel("Runtime (ms)")
+
+        x = np.arange(len(y_values))
+        width = 0.25
+
+        cmap = plt.cm.get_cmap('hsv', 50)
+
+
+        for label, values in y_values.items():
+            # X values as the iteration indices
+            x = np.arange(len(values))
+            y = np.array(values)
+
+            # Generate smooth x values for interpolation
+            x_smooth = np.linspace(x.min(), x.max(), 300)
+
+            # Create a smooth spline curve for y over x
+            y_smooth = make_interp_spline(x, y, k=3)(x_smooth)
+
+            # Plot the smooth curve
+            plt.plot(x_smooth, y_smooth, label=label, linewidth=2)
+
+        if relative_label:
+            # Add a horizontal line for Racket baseline (normalized to 1)
+            plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=relative_label)
+
+        plt.grid(True)
+        # plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
+        plt.legend()
+        plt.tight_layout()
+        print(f"Saving plot to {output_file}")
+        plt.savefig(output_file)
+
     def _plot_multi_benchmark(self, benchmark_names, y_values, output_file, relative_label=""):
-        """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
+        """Plots the given plottable benchmark data produced by the _compare_on_multi_benchmark() method and saves it to a png file.
+
+        This is a bar plot, where each benchmark has a bar for each configuration.
 
         Args:
             benchmark_names: list of str,
