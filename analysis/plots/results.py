@@ -66,32 +66,6 @@ class BenchmarkIngress:
 
         return None, None, None
 
-    def _analyze_ingress(self, cpu_times, gc_times, total_times, is_with_warmup):
-        """Analyzes the extracted runtime values and returns a representative value for each category (e.g. arithmetic mean if no warmup).
-
-        If warmup is enabled, we'll use the average of the fastest 10 runs.
-
-        Args:
-            cpu_times: list of float
-            gc_times: list of float
-            total_times: list of float
-            is_with_warmup: bool
-
-        Returns:
-            Three float values for cpu time, gc time, and total time.
-        """
-        if not is_with_warmup:
-            cpu_val = np.mean(cpu_times) if cpu_times else 0
-            gc_val = np.mean(gc_times) if gc_times else 0
-            total_val = np.mean(total_times) if total_times else 0
-        else:
-            # If warmup is enabled, we'll use the average of the fastest 10 runs.
-            cpu_val = np.mean(sorted(cpu_times)[:10]) if cpu_times else 0
-            gc_val = np.mean(sorted(gc_times)[:10]) if gc_times else 0
-            total_val = np.mean(sorted(total_times)[:10]) if total_times else 0
-
-        return cpu_val, gc_val, total_val
-
     def consume_create_collection(self):
         """Consumes the benchmark data from the directory path and produces a BenchmarkCollection object.
 
@@ -112,10 +86,8 @@ class BenchmarkIngress:
                     # Parse the file and extract the average runtime values
                     cpu_times, gc_times, total_times = self._parse_and_extract(file_path)
 
-                    cpu_val, gc_val, total_val = self._analyze_ingress(cpu_times, gc_times, total_times, is_with_warmup)
-
                     # Create a BenchmarkResult object and add it to the collection
-                    bResult = BenchmarkResult(benchmark_name, interpreter, is_with_warmup, cpu_val, gc_val, total_val)
+                    bResult = BenchmarkResult(benchmark_name, interpreter, is_with_warmup, cpu_times, gc_times, total_times)
 
                     collection.add_benchmark(bResult)
 
@@ -125,7 +97,7 @@ class BenchmarkIngress:
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
     """
-    def __init__(self, benchmark_name, interpreter, with_warmup, cpu_value, gc_value, total_value):
+    def __init__(self, benchmark_name, interpreter, with_warmup, cpu_values, gc_values, total_values):
         """
         Args:
             benchmark_name: str
@@ -136,12 +108,37 @@ class BenchmarkResult:
         self.name = benchmark_name
         self.interpreter = interpreter
         self.with_warmup = with_warmup
-        self.cpu_value = cpu_value
-        self.gc_value = gc_value
-        self.total_value = total_value
+        self.cpu_values = cpu_values
+        self.gc_values = gc_values
+        self.total_values = total_values
 
-    def get_value(self, category):
-        """Returns the value for the given category.
+        # Cached values for the average of the values
+        self.cpu_value = None
+        self.gc_value = None
+        self.total_value = None
+
+    def get_series(self, category):
+        """Returns the series for the given category.
+
+        Args:
+            category: str, "cpu" | "gc" | "total"
+
+        Returns:
+            list of float
+        """
+        if category == "cpu":
+            return self.cpu_values
+        elif category == "gc":
+            return self.gc_values
+        elif category == "total":
+            return self.total_values
+
+        raise ValueError(f"Invalid category: {category}")
+
+    def get_single_value(self, category, is_with_warmup=False):
+        """Returns the value for the given category, caches if not computed yet.
+
+        If warmup is enabled, we'll use the average of the fastest 10 runs.
 
         Args:
             category: str, "cpu" | "gc" | "total"
@@ -149,12 +146,24 @@ class BenchmarkResult:
         Returns:
             float
         """
-        if category == "cpu":
+        if category == "cpu" and self.cpu_value:
             return self.cpu_value
-        elif category == "gc":
+        elif category == "gc" and self.gc_value:
             return self.gc_value
-        else:
+        elif category == "total" and self.total_value:
             return self.total_value
+
+        if not is_with_warmup:
+            self.cpu_value = np.mean(self.cpu_times) if self.cpu_times else 0
+            self.gc_value = np.mean(self.gc_times) if self.gc_times else 0
+            self.total_value = np.mean(self.total_times) if self.total_times else 0
+        else:
+            # If warmup is enabled, we'll use the average of the fastest 10 runs.
+            self.cpu_value = np.mean(sorted(self.cpu_times)[:10]) if self.cpu_times else 0
+            self.gc_value = np.mean(sorted(self.gc_times)[:10]) if self.gc_times else 0
+            self.total_value = np.mean(sorted(self.total_times)[:10]) if self.total_times else 0
+
+        return self.get_single_value(category, is_with_warmup)
 
     def __str__(self):
         return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_value}, GC {self.gc_value}, Total {self.total_value}"
@@ -333,7 +342,7 @@ class BenchmarkCollection():
                 b_result = self.benchmark_results_dict[b_label]
 
                 # Compute the y-value for the given benchmark and configuration
-                raw_value = b_result.get_value(c.category)
+                raw_value = b_result.get_single_value(c.category, c.with_warmup)
                 if rel_config:
                     # If we're doing a relative comparison, then compute the
                     # y-value for this config relative to the rel_config
