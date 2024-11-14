@@ -256,7 +256,7 @@ class BenchmarkCollection():
 
         return picked_config, [c for c in configs if c != picked_config]
 
-    def _filter_benchmarks_for(self, config):
+    def _filter_benchmarks_for_config(self, config):
         """Filters the benchmarks for the given configuration.
 
         Args:
@@ -349,10 +349,11 @@ class BenchmarkCollection():
                     #
                     # Divide the value for this config by the value for the
                     # relative config
+                    assert c.with_warmup == rel_config.with_warmup
                     rel_label = self._get_b_label(rel_config.interpreter,
                                                   benchmark_name,
                                                   rel_config.with_warmup)
-                    relative_value = self.benchmark_results_dict[rel_label].get_value(c.category)
+                    relative_value = self.benchmark_results_dict[rel_label].get_single_value(c.category, c.with_warmup)
                     y_value = raw_value / relative_value
                 else:
                     y_value = raw_value
@@ -361,7 +362,7 @@ class BenchmarkCollection():
                 y_values[self._get_y_label(c)].append(y_value)
         return y_values
 
-    def _plot(self, benchmark_names, y_values, output_file, relative_label=""):
+    def _plot_multi_benchmark(self, benchmark_names, y_values, output_file, relative_label=""):
         """Plots the given plottable benchmark data produced by the compare() method and saves it to a png file.
 
         Args:
@@ -403,7 +404,70 @@ class BenchmarkCollection():
         print(f"Saving plot to {output_file}")
         plt.savefig(output_file)
 
-    def _compare(self, configs, rel_config=None):
+    def _compare_on_single_benchmark(self, single_benchmark_name, configs, rel_config=None):
+        """
+            Produces plottable data for comparing each given configuration on a single benchmark.
+
+            Args:
+                single_benchmark_name: str
+                configs: list of CompareConfig
+
+            Returns:
+                y_values: dict
+                        {
+                            label: str,
+                            value: list of float
+                        }
+
+            e.g. y_values looks like this:
+            (recall that this is for a single benchmark)
+
+                                      ack
+            {
+                NewPWithWarmup   [1.0, 1.2, 1.1, ...],
+                OldPWithWarmup   [1.5, 1.6, 1.7, ...],
+                Racket           [2.0, 2.1, 2.2, ...]
+            }
+        """
+        if len(self.benchmark_results_dict) == 0:
+            raise ValueError("No benchmarks to compare.")
+
+        if len(configs) == 0:
+            raise ValueError("No configurations to compare.")
+
+        y_values = {}
+        for c in configs:
+            # Label to index the benchmark collection
+            b_label = self._get_b_label(c.interpreter, single_benchmark_name, c.with_warmup)
+            if b_label not in self.benchmark_results_dict:
+                raise ValueError(f"Benchmark {b_label} not found.")
+
+            # Benchmark result for the given configuration and benchmark
+            b_result = self.benchmark_results_dict[b_label]
+
+            # Compute the y-value series for the given benchmark and configuration
+            raw_values = b_result.get_series(c.category)
+            if rel_config:
+                # If we're doing a relative comparison, then compute the
+                # y-value for this config relative to the rel_config
+                #
+                # Divide the value for this config by the value for the
+                # relative config
+                assert c.with_warmup == rel_config.with_warmup
+                rel_label = self._get_b_label(rel_config.interpreter,
+                                              single_benchmark_name,
+                                              rel_config.with_warmup)
+                relative_values = self.benchmark_results_dict[rel_label].get_series(c.category)
+
+                # y_values is the piecewise division of the raw values by the relative values
+                y_values[self._get_y_label(c)] = [raw / relative for raw, relative in zip(raw_values, relative_values)]
+
+            else:
+                y_values[self._get_y_label(c)] = raw_values
+
+        return y_values
+
+    def _compare_on_multi_benchmark(self, configs, rel_config=None, single_benchmark_name=None):
         """
             Produces plottable data for comparing each given configuration on a single plot.
 
@@ -422,6 +486,14 @@ class BenchmarkCollection():
                 }
                 Both benchmark_names and the inner list of y_values have the same lengths and order.
                 Values and benchmarks are sorted in non-decreasing order based on the runtime.
+
+                e.g. y_values looks like this:
+                                      ack ctak fib ....
+                {
+                    NewPWithWarmup   [1.0, 1.2, 1.1, ...]
+                    OldPWithWarmup   [1.5, 1.6, 1.7, ...]
+                    Racket           [2.0, 2.1, 2.2, ...]
+                }
         """
         if len(self.benchmark_results_dict) == 0:
             raise ValueError("No benchmarks to compare.")
@@ -436,7 +508,7 @@ class BenchmarkCollection():
 
         # When found, pop it from configs, filter and sort the benchmarks for
         # the "sort" configuration
-        benchmarks = self._filter_benchmarks_for(sort_config)
+        benchmarks = self._filter_benchmarks_for_config(sort_config)
         benchmark_names = [b.name for b in benchmarks]
 
         # Then construct the y-values for other configurations, selecting the
@@ -448,7 +520,7 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, _configs, output_file, is_relative=False):
+    def plot(self, _configs, output_file, is_relative=False, single_benchmark_name=None):
         print("Generating comparison plot data...")
         rel_config_plot_label = ""
         rel_config = None
@@ -465,5 +537,9 @@ class BenchmarkCollection():
                     rel_config_plot_label = c.interpreter
                 else:
                     configs.append(c)
-        benchmark_names, y_values = self._compare(configs, rel_config)
-        return self._plot(benchmark_names, y_values, output_file, rel_config_plot_label)
+        if not single_benchmark_name:
+            benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
+            return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label)
+
+        y_values = self._compare_on_single_benchmark(single_benchmark_name, configs, rel_config)
+        return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label)
