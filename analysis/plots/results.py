@@ -410,7 +410,7 @@ class BenchmarkCollection():
 
         for label, values in y_values.items():
             if len(values) == 0:
-                raise ValueError(f"No values for {label}")
+                raise ValueError(f"No values for {label} in {single_benchmark_name}")
 
             # X values as the iteration indices
             x = np.arange(len(values))
@@ -435,6 +435,7 @@ class BenchmarkCollection():
         plt.tight_layout()
         print(f"Saving plot to {output_file}")
         plt.savefig(output_file)
+        plt.close()
 
     def _plot_multi_benchmark(self, benchmark_names, y_values, output_file, relative_label=""):
         """Plots the given plottable benchmark data produced by the _compare_on_multi_benchmark() method and saves it to a png file.
