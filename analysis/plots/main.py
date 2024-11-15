@@ -132,6 +132,7 @@ def main():
     if b_param == "all":
         for b_name in benchmark_collection.benchmark_names:
             benchmark_collection.plot(configs, f"singles/{b_name}.png", relative_plot, b_name)
+        return
 
     benchmark_collection.plot(configs, outfile_name, relative_plot, args.single_benchmark_name)
 
