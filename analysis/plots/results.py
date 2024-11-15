@@ -47,6 +47,8 @@ class BenchmarkIngress:
                     gc_times.append(float(gc_match.group(1)))
                 elif total_match := total_pattern.search(line):
                     total_times.append(float(total_match.group(1)))
+                elif "exn:fail" in line:
+                    print(f"WARNING: File {file_path} contains an error: {line}")
 
         return cpu_times, gc_times, total_times
 
@@ -407,6 +409,9 @@ class BenchmarkCollection():
 
 
         for label, values in y_values.items():
+            if len(values) == 0:
+                raise ValueError(f"No values for {label}")
+
             # X values as the iteration indices
             x = np.arange(len(values))
             y = np.array(values)
