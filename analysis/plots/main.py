@@ -98,6 +98,7 @@ def main():
             parser.error("The relative interpreter must be one of the interpreters that are being compared.")
 
     # Generate CompareConfigs based on the given arguments
+    rel_config = None
     configs = []
     outfile_name = ""
     for interpreter in args.interpreters:
@@ -105,18 +106,32 @@ def main():
         if interpreter == RACKET:
             continue
 
+        # With warmup and no-warmup are not mutually exclusive. They can be both
+        # set, in which case we will plot both configurations.
         if args.with_warmup:
             outfile_name += f"vs {interpreter} with warmup "
-            configs.append(CompareConfig(interpreter, True, args.category_type, relative))
+            c  = CompareConfig(interpreter, True, args.category_type, relative)
+            if relative:
+                rel_config = c
+            else:
+                configs.append(c)
 
         if args.no_warmup:
             outfile_name += f"vs {interpreter} no warmup "
-            configs.append(CompareConfig(interpreter, False, args.category_type, relative))
+            c = CompareConfig(interpreter, False, args.category_type, relative)
+            if relative:
+                rel_config = c
+            else:
+                configs.append(c)
 
     # Handle racket separately
     if RACKET in args.interpreters:
         outfile_name += "vs Racket "
-        configs.append(CompareConfig(RACKET, True, args.category_type, relative))
+        c = CompareConfig(RACKET, True, args.category_type, relative)
+        if relative:
+            rel_config = c
+        else:
+            configs.append(c)
 
     outfile_name += f"{args.category_type} times"
 
@@ -141,7 +156,7 @@ def main():
             benchmark_collection.plot(configs, f"singles/{b_name}.png", relative_plot, b_name)
         return
 
-    benchmark_collection.plot(configs, outfile_name, relative_plot, args.single_benchmark_name)
+    benchmark_collection.plot(configs, outfile_name, rel_config, args.single_benchmark_name)
 
 if __name__ == "__main__":
     main()

@@ -608,23 +608,10 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, _configs, output_file, is_relative=False, single_benchmark_name=None):
+    def plot(self, configs, output_file, rel_config=None, single_benchmark_name=None):
         print(f"Generating comparison plot data for {output_file}...")
-        rel_config_plot_label = ""
-        rel_config = None
+        rel_config_plot_label = rel_config.interpreter if rel_config else ""
 
-        if not is_relative:
-            configs = _configs
-        else:
-            # Find out which config is the relative one and pop it out from
-            # configs, keep the label for the plot
-            configs = []
-            for c in _configs:
-                if c.relative:
-                    rel_config = c
-                    rel_config_plot_label = c.interpreter
-                else:
-                    configs.append(c)
         if not single_benchmark_name:
             benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
             return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label)
