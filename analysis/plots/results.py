@@ -358,8 +358,6 @@ class BenchmarkCollection():
                     #
                     # Divide the value for this config by the value for the
                     # relative config
-                    if rel_config.interpreter != RACKET:
-                        assert c.with_warmup == rel_config.with_warmup
                     rel_label = self._get_b_label(rel_config.interpreter,
                                                   benchmark_name,
                                                   rel_config.with_warmup)

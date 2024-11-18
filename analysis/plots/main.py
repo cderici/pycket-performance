@@ -62,7 +62,7 @@ def main():
     category_group.add_argument("--total", dest="category_type", action="store_const", const="total", help="Use total time for benchmarks.")
     parser.set_defaults(category_type="total")
 
-    parser.add_argument("--relative", choices=["new", "old", "racket"], help="Set the relative baseline interpreter.")
+    parser.add_argument("--relative", choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
     parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects. Use \"all\" for producing plots for all benchmarks.")
 
     args = parser.parse_args()
@@ -82,17 +82,24 @@ def main():
 
     # If relative is set, make sure it's one of the interpreters that are given
     relative_plot = False
+    relative_interpreter = None
     if args.relative:
         relative_plot = True
         err = False
         # This is a bit hacky, but we have do it unless we want users to type
         # "New Pycket" instead of "new" on the command line
-        if "new" in args.relative and NEW_PYCKET not in args.interpreters:
-            err = True
-        elif "old" in args.relative and OLD_PYCKET not in args.interpreters:
-            err = True
-        elif "racket" in args.relative and RACKET not in args.interpreters:
-            err = True
+        if "new" in args.relative:
+            relative_interpreter = NEW_PYCKET
+            if NEW_PYCKET not in args.interpreters:
+                err = True
+        elif "old" in args.relative:
+            relative_interpreter = OLD_PYCKET
+            if OLD_PYCKET not in args.interpreters:
+                err = True
+        elif "racket" in args.relative:
+            relative_interpreter = RACKET
+            if RACKET not in args.interpreters:
+                err = True
 
         if err:
             parser.error("The relative interpreter must be one of the interpreters that are being compared.")
@@ -102,7 +109,7 @@ def main():
     configs = []
     outfile_name = ""
     for interpreter in args.interpreters:
-        relative = relative_plot and args.relative in interpreter.lower()
+        # Handle racket separately
         if interpreter == RACKET:
             continue
 
@@ -110,6 +117,7 @@ def main():
         # set, in which case we will plot both configurations.
         if args.with_warmup:
             outfile_name += f"vs {interpreter} with warmup "
+            relative = relative_plot and interpreter == relative_interpreter and "with-warmup" in args.relative
             c  = CompareConfig(interpreter, True, args.category_type, relative)
             if relative:
                 rel_config = c
@@ -118,15 +126,17 @@ def main():
 
         if args.no_warmup:
             outfile_name += f"vs {interpreter} no warmup "
+            relative = relative_plot and interpreter == relative_interpreter and "no-warmup" in args.relative
             c = CompareConfig(interpreter, False, args.category_type, relative)
             if relative:
                 rel_config = c
             else:
                 configs.append(c)
 
-    # Handle racket separately
+    # Handle racket separately (because of warmup stuff)
     if RACKET in args.interpreters:
         outfile_name += "vs Racket "
+        relative = relative_plot and RACKET == relative_interpreter and "racket" in args.relative
         c = CompareConfig(RACKET, True, args.category_type, relative)
         if relative:
             rel_config = c
