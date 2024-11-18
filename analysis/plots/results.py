@@ -4,6 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import make_interp_spline
 
+from random import uniform as ru
+
 plt.style.use('fivethirtyeight')
 
 NEW_PYCKET = "New Pycket"
@@ -369,6 +371,14 @@ class BenchmarkCollection():
                 y_values[self._get_y_label(c)].append(y_value)
         return y_values
 
+    def _random_dark_color(self, base_color):
+        base_shades = {
+            "green": (0, ru(0.3, 0.6), 0),  # Dark green
+            "blue": (0, 0, ru(0.3, 0.6)),   # Dark blue
+            "red": (ru(0.3, 0.6), 0, 0)     # Dark red
+        }
+        return base_shades[base_color]
+
     def _plot_single_benchmark(self, single_benchmark_name, y_values, output_file, relative_label=""):
         """Plots the given plottable benchmark data produced by the _compare_on_single_benchmark() method and saves it to a png file.
 
@@ -462,14 +472,15 @@ class BenchmarkCollection():
 
         cmap = plt.cm.get_cmap('hsv', 50)
         for i, (label, values) in enumerate(y_values.items()):
-            """
-            color = "red"
-            if OLD_PYCKET in label:
-                color = "green"
+            color=cmap(i*(50//len(y_values)))
+
+            if NEW_PYCKET in label:
+                color = self._random_dark_color("green")
+            elif OLD_PYCKET in label:
+                color = self._random_dark_color("red")
             elif RACKET in label:
-                color = "blue"
-            """
-            plt.bar(x + i * width, values, width, label=label, color=cmap(i*(50//len(y_values))))
+                color = self._random_dark_color("blue")
+            plt.bar(x + i * width, values, width, label=label, color=color)
 
         if relative_label:
             # Add a horizontal line for Racket baseline (normalized to 1)
