@@ -467,7 +467,8 @@ class BenchmarkCollection():
         plt.ylabel("Runtime (ms)")
 
         x = np.arange(len(benchmark_names))
-        width = 0.25
+        width = 0.2
+        group_gap = 0.2
 
         cmap = plt.cm.get_cmap('hsv', 50)
         for i, (label, values) in enumerate(y_values.items()):
@@ -479,7 +480,7 @@ class BenchmarkCollection():
                 color = self._random_dark_color("red")
             elif RACKET in label:
                 color = self._random_dark_color("blue")
-            plt.bar(x + i * width, values, width, label=label, color=color)
+            plt.bar(x + i * (width) + group_gap * (i // len(y_values)), values, width, label=label, color=color)
 
         if relative_label:
             # Add a horizontal line for Racket baseline (normalized to 1)
