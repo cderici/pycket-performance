@@ -104,7 +104,9 @@ def main():
         relative = relative_plot and args.relative in interpreter.lower()
 
         if args.with_warmup:
-            outfile_name += f"vs {interpreter} with warmup "
+            outfile_name += f"vs {interpreter} "
+            if interpreter != RACKET:
+                outfile_name += "with warmup "
             configs.append(CompareConfig(interpreter, True, args.category_type, relative))
 
         if args.no_warmup:
