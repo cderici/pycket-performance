@@ -102,16 +102,21 @@ def main():
     outfile_name = ""
     for interpreter in args.interpreters:
         relative = relative_plot and args.relative in interpreter.lower()
+        if interpreter == RACKET:
+            continue
 
         if args.with_warmup:
-            outfile_name += f"vs {interpreter} "
-            if interpreter != RACKET:
-                outfile_name += "with warmup "
+            outfile_name += f"vs {interpreter} with warmup "
             configs.append(CompareConfig(interpreter, True, args.category_type, relative))
 
         if args.no_warmup:
             outfile_name += f"vs {interpreter} no warmup "
             configs.append(CompareConfig(interpreter, False, args.category_type, relative))
+
+    # Handle racket separately
+    if RACKET in args.interpreters:
+        outfile_name += "vs Racket "
+        configs.append(CompareConfig(RACKET, True, args.category_type, relative))
 
     outfile_name += f"{args.category_type} times"
 
