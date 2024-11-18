@@ -159,7 +159,9 @@ def main():
     else:
         outfile_name = outfile_name[3:]
 
-    benchmark_collection = BenchmarkIngress(args.directory).consume_create_collection()
+    HARDCODED_EXCLUDES = ["sumrec"]
+
+    benchmark_collection = BenchmarkIngress(args.directory, excluded_benchmarks=HARDCODED_EXCLUDES).consume_create_collection()
 
     if b_param == "all":
         for b_name in benchmark_collection.benchmark_names:

@@ -22,12 +22,13 @@ RESULT_TOTAL_REGEXP = r'RESULT-total:\s+([\d.]+)'
 class BenchmarkIngress:
     """Processes the benchmark file and extracts the runtime durations from it.
     """
-    def __init__(self, directory_path):
+    def __init__(self, directory_path, excluded_benchmarks=[]):
         """
         Args:
             directory_path: str
         """
         self.directory = directory_path
+        self.excluded_benchmarks = excluded_benchmarks
 
     def _parse_and_extract(self, file_path):
         """Extracts runtime duration values from the given file path.
@@ -87,6 +88,9 @@ class BenchmarkIngress:
             if filename.endswith('.rst'):
                 file_path = os.path.join(self.directory, filename)
                 interpreter, benchmark_name, is_with_warmup = self._analyze_filename(filename)
+                if benchmark_name in self.excluded_benchmarks:
+                    print(f"Excluding benchmark {benchmark_name}")
+                    continue
 
                 if benchmark_name:
                     # Parse the file and extract the average runtime values
