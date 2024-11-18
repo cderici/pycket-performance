@@ -158,14 +158,14 @@ class BenchmarkResult:
             return self.total_value
 
         if not is_with_warmup:
-            self.cpu_value = np.mean(self.cpu_times) if self.cpu_times else 0
-            self.gc_value = np.mean(self.gc_times) if self.gc_times else 0
-            self.total_value = np.mean(self.total_times) if self.total_times else 0
+            self.cpu_value = np.mean(self.cpu_values) if self.cpu_values else 0
+            self.gc_value = np.mean(self.gc_values) if self.gc_values else 0
+            self.total_value = np.mean(self.total_values) if self.total_values else 0
         else:
             # If warmup is enabled, we'll use the average of the fastest 10 runs.
-            self.cpu_value = np.mean(sorted(self.cpu_times)[:10]) if self.cpu_times else 0
-            self.gc_value = np.mean(sorted(self.gc_times)[:10]) if self.gc_times else 0
-            self.total_value = np.mean(sorted(self.total_times)[:10]) if self.total_times else 0
+            self.cpu_value = np.mean(sorted(self.cpu_values)[:10]) if self.cpu_values else 0
+            self.gc_value = np.mean(sorted(self.gc_values)[:10]) if self.gc_values else 0
+            self.total_value = np.mean(sorted(self.total_values)[:10]) if self.total_values else 0
 
         return self.get_single_value(category, is_with_warmup)
 
