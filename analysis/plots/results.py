@@ -192,6 +192,7 @@ class CompareConfig():
         self.category = category
         self.relative = relative
 
+
     def __str__(self):
         return f"{self.interpreter} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
 
@@ -471,19 +472,28 @@ class BenchmarkCollection():
         plt.ylabel("Runtime (ms)")
 
         x = np.arange(len(benchmark_names))
-        width = 0.2
+        width = 0.15
         group_gap = 0.2
+
+        colors = {
+            "New Pycket With Warmup": "#146e14",
+            "New Pycket No Warmup": "#66CDAA",
+            "Old Pycket With Warmup": "#b52424",
+            "Old Pycket No Warmup": "#ff7d7d",
+            "Racket With Warmup": "#4558e6" # FIXME: "Racket"
+        }
 
         cmap = plt.cm.get_cmap('hsv', 50)
         for i, (label, values) in enumerate(y_values.items()):
             color=cmap(i*(50//len(y_values)))
-
             if NEW_PYCKET in label:
                 color = self._random_dark_color("green")
             elif OLD_PYCKET in label:
                 color = self._random_dark_color("red")
             elif RACKET in label:
                 color = self._random_dark_color("blue")
+            # override the color for now
+            color=colors[label]
             plt.bar(x + i * (width) + group_gap * (i // len(y_values)), values, width, label=label, color=color)
 
         if relative_label:
