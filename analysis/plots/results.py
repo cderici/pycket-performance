@@ -122,10 +122,10 @@ class BenchmarkResult:
         self.gc_values = gc_values
         self.total_values = total_values
 
-        # Cached values for the average of the values
-        self.cpu_value = None
-        self.gc_value = None
-        self.total_value = None
+        # Precompute the best values for each category
+        self.cpu_best = sorted(cpu_values)[0] if cpu_values else None
+        self.gc_best = sorted(gc_values)[0] if gc_values else None
+        self.total_best = sorted(total_values)[0] if total_values else None
 
     def get_series(self, category):
         """Returns the series for the given category.
@@ -156,27 +156,17 @@ class BenchmarkResult:
         Returns:
             float
         """
-        if category == "cpu" and self.cpu_value:
-            return self.cpu_value
-        elif category == "gc" and self.gc_value:
-            return self.gc_value
-        elif category == "total" and self.total_value:
-            return self.total_value
+        if category == "cpu" and self.cpu_best:
+            return self.cpu_best
+        elif category == "gc" and self.gc_best:
+            return self.gc_best
+        elif category == "total" and self.total_best:
+            return self.total_best
 
-        if not is_with_warmup:
-            self.cpu_value = np.mean(self.cpu_values) if self.cpu_values else 0
-            self.gc_value = np.mean(self.gc_values) if self.gc_values else 0
-            self.total_value = np.mean(self.total_values) if self.total_values else 0
-        else:
-            # If warmup is enabled, we'll use the average of the fastest 10 runs.
-            self.cpu_value = np.mean(sorted(self.cpu_values)[:10]) if self.cpu_values else 0
-            self.gc_value = np.mean(sorted(self.gc_values)[:10]) if self.gc_values else 0
-            self.total_value = np.mean(sorted(self.total_values)[:10]) if self.total_values else 0
-
-        return self.get_single_value(category, is_with_warmup)
+        raise ValueError(f"Invalid category: {category}")
 
     def __str__(self):
-        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_value}, GC {self.gc_value}, Total {self.total_value}"
+        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_best}, GC {self.gc_best}, Total {self.total_best}"
 
 class CompareConfig():
     def __init__(self, interpreter, with_warmup, category="total", relative=False):
