@@ -239,26 +239,20 @@ class BenchmarkCollection():
 
         PRIORITY = [NEW_PYCKET, OLD_PYCKET, RACKET]
 
-        priority_picks = [None]*len(PRIORITY)
-        picked_config = None
-        # Select a configuration based on priority
-        # Skip the relative config (see above comment)
-        # If the highest priority config is found, stop looking
-        # Keep an array for priority picks
-        for c in configs:
-            if c.interpreter == PRIORITY[0] and not c.relative:
-                # Found the highest priority config, stop looking
-                picked_config = c
-                break
-            elif not priority_picks[1] and c.interpreter == PRIORITY[1] and not c.relative:
-                priority_picks[1] = c
-            elif not any(priority_picks) and c.interpreter == PRIORITY[2] and not c.relative:
-                priority_picks[2] = c
+        # Current focus is on the no warmup ones.
+        PRIORITY = [
+            {"interp": NEW_PYCKET, "warmup": False},
+            {"interp": NEW_PYCKET, "warmup": True},
+            {"interp": OLD_PYCKET, "warmup": False},
+            {"interp": OLD_PYCKET, "warmup": True},
+            {"interp": RACKET, "warmup": True}
+        ]
 
-        if not picked_config:
-            picked_config = priority_picks[1] or priority_picks[2]
-
-        return picked_config, [c for c in configs if c != picked_config]
+        for p in PRIORITY:
+            for c in configs:
+                if c.interpreter == p["interp"] and c.with_warmup == p["warmup"] and not c.relative:
+                    return c, [c for c in configs if c != c]
+        raise ValueError("No appropriate configurations found.")
 
     def _filter_benchmarks_for_config(self, config):
         """Filters the benchmarks for the given configuration.
