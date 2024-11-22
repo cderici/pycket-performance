@@ -460,10 +460,10 @@ class BenchmarkCollection():
         group_gap = 0.2
 
         colors = {
-            "New Pycket With Warmup": "#146e14",
-            "New Pycket No Warmup": "#66CDAA",
-            "Old Pycket With Warmup": "#b52424",
-            "Old Pycket No Warmup": "#ff7d7d",
+            "New Pycket With Warmup": "#0c590c",
+            "New Pycket No Warmup": "#5ae8b8",
+            "Old Pycket With Warmup": "#941616",
+            "Old Pycket No Warmup": "#f77474",
             "Racket With Warmup": "#4558e6" # FIXME: "Racket"
         }
 
