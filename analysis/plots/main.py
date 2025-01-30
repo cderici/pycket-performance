@@ -111,7 +111,7 @@ def main():
         # With warmup and no-warmup are not mutually exclusive. They can be both
         # set, in which case we will plot both configurations.
         if args.with_warmup:
-            outfile_name += f"vs {interpreter} with warmup "
+            outfile_name += f"vs {interpreter}WW "
             relative = relative_plot and interpreter == relative_interpreter and "with-warmup" in args.relative
             c  = CompareConfig(interpreter, True, args.category_type, relative)
             if relative:
@@ -120,7 +120,7 @@ def main():
                 configs.append(c)
 
         if args.no_warmup:
-            outfile_name += f"vs {interpreter} no warmup "
+            outfile_name += f"vs {interpreter}NW "
             relative = relative_plot and interpreter == relative_interpreter and "no-warmup" in args.relative
             c = CompareConfig(interpreter, False, args.category_type, relative)
             if relative:
@@ -130,7 +130,7 @@ def main():
 
     # Handle racket separately (because of warmup stuff)
     if RACKET in args.interpreters:
-        outfile_name += "vs Racket "
+        outfile_name += f"vs {RACKET} "
         relative = relative_plot and RACKET == relative_interpreter and "racket" in args.relative
         c = CompareConfig(RACKET, True, args.category_type, relative)
         if relative:

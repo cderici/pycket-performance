@@ -8,9 +8,9 @@ from random import uniform as ru
 
 plt.style.use('fivethirtyeight')
 
-NEW_PYCKET = "New Pycket"
-OLD_PYCKET = "Old Pycket"
-RACKET = "Racket"
+NEW_PYCKET = "NP"
+OLD_PYCKET = "OP"
+RACKET = "R"
 
 BENCH_FILE_PYCKET_REGEXP = r'(new|old)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
 BENCH_FILE_RACKET_REGEXP = 'racket-(.*?).rst'
@@ -616,3 +616,4 @@ class BenchmarkCollection():
 
         y_values = self._compare_on_single_benchmark(single_benchmark_name, configs, rel_config)
         return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label)
+
