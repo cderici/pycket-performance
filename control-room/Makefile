@@ -45,7 +45,9 @@ all-pycket-scripts: all-pycket-new-scripts all-pycket-old-scripts
 # Pycket NEW scripts
 
 .PHONY: all-pycket-new-scripts
-all-pycket-new-scripts: pycket-new-with-warmup-scripts pycket-new-no-warmup-scripts pycket-new-traces-scripts
+all-pycket-new-scripts: pycket-new-with-warmup-scripts pycket-new-no-warmup-scripts pycket-new-with-warmup-traces-scripts pycket-new-no-warmup-traces-scripts
+
+
 
 .PHONY: pycket-new-with-warmup-scripts
 pycket-new-with-warmup-scripts:
@@ -55,14 +57,21 @@ pycket-new-with-warmup-scripts:
 pycket-new-no-warmup-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --no-warmup
 
-.PHONY: pycket-new-traces-scripts
+.PHONY: pycket-new-with-warmup-traces-scripts
 pycket-new-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --with-warmup
+
+.PHONY: pycket-new-no-warmup-traces-scripts
+pycket-new-traces-scripts:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --no-warmup
+
 
 # Pycket OLD scripts
 
 .PHONY: all-pycket-old-scripts
-all-pycket-old-scripts: pycket-old-with-warmup-scripts pycket-old-no-warmup-scripts pycket-old-traces-scripts
+all-pycket-old-scripts: pycket-old-with-warmup-scripts pycket-old-no-warmup-scripts pycket-old-with-warmup-traces-scripts pycket-old-no-warmup-traces-scripts
+
+
 
 .PHONY: pycket-old-with-warmup-scripts
 pycket-old-with-warmup-scripts:
@@ -72,9 +81,14 @@ pycket-old-with-warmup-scripts:
 pycket-old-no-warmup-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --no-warmup
 
-.PHONY: pycket-old-traces-scripts
+.PHONY: pycket-old-with-warmup-traces-scripts
 pycket-old-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -t -s
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --with-warmup
+
+.PHONY: pycket-old-no-warmup-traces-scripts
+pycket-old-traces-scripts:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --no-warmup
+
 
 # Racket scripts
 
