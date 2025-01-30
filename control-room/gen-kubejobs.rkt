@@ -49,7 +49,7 @@
 
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
-(define OUTER-ITERATIONS 10)
+(define OUTER-ITERATIONS 1000)
 
 ;; 1 - remove the logging, without the jit parameters
 ;; 2 - add the jit-parameters
@@ -109,23 +109,39 @@ BINARY_DIR=~a
 ;; with/no-warmup is either "with" or "no"
 ;; gen-traces? is a boolean
 (define (pycket-launcher bench-name pycket-variant with/no-warmup gen-traces?)
-  (when (and (equal? with/no-warmup "no") gen-traces?)
+  #;(when (and (equal? with/no-warmup "no") gen-traces?)
     (error 'pycket-launcher "Cannot generate traces without warmup"))
   (let ([pycket-binary (if (equal? pycket-variant "new")
                             "pycket-c-linklets"
                             "pycket-c")]
         [time-output-file
           (if gen-traces?
-            (format "~a-pycket-~a-traces.rst" pycket-variant bench-name)
+            (format "~a-pycket-~a-traces-~a-warmup.rst" pycket-variant bench-name with/no-warmup)
             (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))])
     (if (equal? with/no-warmup "no")
       ;; no warmup -- single run in a for loop
-      (format "
+      (if (not gen-traces?)
+          (format "
 for i in `seq 1 ~a`;
 do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
-done\n\n
-" OUTER-ITERATIONS pycket-binary bench-name time-output-file)
+done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file)
+          ;; If we want traces in a no-warmup setup, then we have to get only the last one
+          ;; We don't want to get OUTER-ITERATIONS many trace files (each >100M)
+          (format "
+for i in `seq 1 ~a`;
+do
+  $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+done
+
+PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+
+\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file
+                       pycket-binary bench-name with/no-warmup
+                       pycket-binary bench-name time-output-file
+                       )
+          )
+
 
       ;; with warmup -- multiple runs within the benchmark source
       (if gen-traces?
@@ -176,12 +192,12 @@ done\n\n
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
     (let* ([extension (if (equal? script/job "scripts") ".sh" ".yaml")]
-           [with/no-warmup (if with-warmup? "with" "no")]
-           [file-postfix (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))])
+           [with/no-warmup (if with-warmup? "with-warmup" "no-warmup")]
+           [fname-template (if generate-traces? "~a-pycket-~a-~a-traces" "~a-pycket-~a-~a")])
       (values
         (if (equal? pycket/racket "racket")
             (format "racket-~a" bench-name)
-            (format "~a-pycket-~a-~a" old/new bench-name file-postfix))
+            (format fname-template old/new bench-name with/no-warmup))
         extension))))
 
 (define job-template
@@ -220,12 +236,12 @@ spec:
         [generate-traces? (kubejob-config-gen-traces? config)]
         [docker-image (kubejob-config-docker-image config)])
     (let-values ([(file-path extension) (generate-file-path config)])
-      (let* ([with/no-warmup (if (kubejob-config-with-warmup? config) "with" "no")]
-            [warmup/traces (if generate-traces? "traces" (format "~a-warmup" with/no-warmup))]
+      (let* ([with/no-warmup (if (kubejob-config-with-warmup? config) "with-warmup" "no-warmup")]
+            [jname-template (if generate-traces? "~a-~a-~a-~a-traces" "~a-~a-~a-~a")]
             [job-name
               (if (equal? pycket/racket "racket")
                   (format "racket-~a" bench-name)
-                  (format "~a-~a-~a-~a" old/new pycket/racket bench-name warmup/traces))])
+                  (format jname-template old/new pycket/racket bench-name with/no-warmup))])
         (values (format "jobs/~a~a" file-path extension)
                 (format job-template
                   job-name job-name docker-image (string-append file-path ".sh")))))))
@@ -283,7 +299,7 @@ spec:
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
-   [("-t" "--traces") "with warmup, extract the JIT log" (set! with-warmup? #t) (set! generate-traces? #t)]
+   [("-t" "--traces") "with warmup, extract the JIT log" (set! generate-traces? #t)]
    #:args ([docker-image #f])
 
   ;; Validate arguments
