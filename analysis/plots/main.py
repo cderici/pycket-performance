@@ -69,11 +69,6 @@ def main():
 
     b_param = args.single_benchmark_name
 
-    if b_param:
-        args.interpreters = [NEW_PYCKET, OLD_PYCKET, RACKET]
-        args.with_warmup = True
-        args.no_warmup = True
-
     # Check if at least one interpreter is specified
     try:
         len(args.interpreters)
@@ -147,17 +142,16 @@ def main():
 
     if relative_plot:
         outfile_name += f" relative to {args.relative}"
+
     outfile_name = outfile_name.replace(" ", "_")
-    outfile_name += ".png"
+    outfile_name = outfile_name[3:]
 
     if b_param:
         # Check the singles dir, and create if it doesn't exist
         if not os.path.exists("singles"):
             os.makedirs("singles")
-
-        outfile_name = f"singles/{b_param}.png"
     else:
-        outfile_name = outfile_name[3:]
+        outfile_name += ".png"
 
     HARDCODED_EXCLUDES = ["sumrec"]
 
@@ -165,7 +159,8 @@ def main():
 
     if b_param == "all":
         for b_name in benchmark_collection.benchmark_names:
-            benchmark_collection.plot(configs, f"singles/{b_name}.png", relative_plot, b_name)
+            filename = f"singles/{outfile_name}_{b_name}.png"
+            benchmark_collection.plot(configs, filename, relative_plot, b_name)
         return
 
     benchmark_collection.plot(configs, outfile_name, rel_config, args.single_benchmark_name)
