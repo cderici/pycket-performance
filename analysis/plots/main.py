@@ -1,11 +1,7 @@
 import os
-import re
-import numpy as np
-import matplotlib.pyplot as plt
 import argparse
 
-from results import BenchmarkCollection, BenchmarkResult, \
-                    NEW_PYCKET, OLD_PYCKET, RACKET, \
+from results import NEW_PYCKET, OLD_PYCKET, RACKET, \
                     CompareConfig, BenchmarkIngress
 
 """
