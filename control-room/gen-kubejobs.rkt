@@ -4,7 +4,7 @@
 
 (define benchmarks (list
                       'ack
-		                  'array1
+		      'array1
                       'cpstak
                       'ctak
                       'diviter
@@ -49,7 +49,7 @@
 
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
-(define OUTER-ITERATIONS 1000)
+(define OUTER-ITERATIONS 500)
 
 ;; 1 - remove the logging, without the jit parameters
 ;; 2 - add the jit-parameters
