@@ -16,7 +16,11 @@ JOBS_TARGET_DIR  := $(BENCHMARK_DIR)/jobs
 ####################### TOP CONTROLS ############################
 #################################################################
 
-all: all-racket all-pycket stage-all
+.PHONY: all
+all: gen-all stage-all
+
+.PHONY: gen-all
+gen-all: all-racket all-pycket
 
 .PHONY: all-pycket
 all-pycket: all-pycket-scripts all-pycket-jobs
