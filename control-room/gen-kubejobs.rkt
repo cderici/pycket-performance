@@ -57,11 +57,24 @@
 (define WITH-WARMUP-HUMAN "with-warmup")
 (define NO-WARMUP-HUMAN "no-warmup")
 
+(define OLD-INTERNAL "O")
+(define OLD-HUMAN "old")
+(define NEW-INTERNAL "N")
+(define NEW-HUMAN "new")
+
 (struct repr (internal human))
-(define pycket-repr (repr PYCKET-INTERNAL PYCKET-HUMAN))
-(define racket-repr (repr RACKET-INTERNAL RACKET-HUMAN))
+(define PYCKET-REPR (repr PYCKET-INTERNAL PYCKET-HUMAN))
+(define RACKET-REPR (repr RACKET-INTERNAL RACKET-HUMAN))
 (define w-warmup-repr (repr WITH-WARMUP-INTERNAL WITH-WARMUP-HUMAN))
 (define no-warmup-repr (repr NO-WARMUP-INTERNAL NO-WARMUP-HUMAN))
+(define new-repr (repr NEW-INTERNAL NEW-HUMAN))
+(define old-repr (repr OLD-INTERNAL OLD-HUMAN))
+
+(define (new/old-repr is-new?)
+  (repr-internal (if is-new? new-repr old-repr)))
+
+(define (warmup-repr with-warmup?)
+  (repr-internal (if with-warmup? w-warmup-repr no-warmup-repr)))
 
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
@@ -118,14 +131,14 @@ BINARY_DIR=~a
         (format "echo \"~a~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
                 old/new pycket/racket warmup/traces bench-name started/completed))))
 
-(define (racket-launcher bench-name _1 _2 _3)
+(define (racket-script bench-name _1 _2 _3)
   (format "$BINARY_DIR/racket $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/R-~a.rst\n\n"
                 bench-name bench-name))
 
 ;; pycket-variant is either "new" or "old"
 ;; with/no-warmup is either "with" or "no"
 ;; gen-traces? is a boolean
-(define (pycket-launcher bench-name pycket-variant with/no-warmup gen-traces?)
+(define (pycket-script bench-name pycket-variant with/no-warmup gen-traces?)
   #;(when (and (equal? with/no-warmup "no") gen-traces?)
     (error 'pycket-launcher "Cannot generate traces without warmup"))
   (let ([pycket-binary (if (equal? pycket-variant "new")
@@ -205,16 +218,11 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
 ;; 2. the script content
 (define (gen-script config)
   (let ([bench-name (kubejob-config-bench-name config)]
-        [pycket/racket (kubejob-config-pycket/racket config)]
-        [old/new (kubejob-config-old/new config)]
+        [is-pycket? (kubejob-config-is-pycket? config)]
+        [is-new? (kubejob-config-is-new? config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
-    (let* ([launch-function
-            (if (equal? pycket/racket "R")
-                racket-launcher
-                pycket-launcher)]
-           [with/no-warmup (if with-warmup? "with" "no")]
-           [pycket/racket-human (if (equal? pycket/racket "R") "racket" "pycket")])
+    (let* ([launch-function (if is-pycket? pycket-script racket-script)])
       (let-values ([(file-path extension) (generate-file-path config)])
         (values (format "scripts/~a~a" file-path extension)
                 (format "~a~a~a~a"
@@ -229,19 +237,20 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
 
 (define (generate-file-path config)
   (let ([bench-name (kubejob-config-bench-name config)]
-        [script/job (kubejob-config-script/job config)]
-        [pycket/racket (kubejob-config-pycket/racket config)]
-        [old/new (kubejob-config-old/new config)]
-        [with-warmup? (kubejob-config-with-warmup? config)]
+        [is-script? (kubejob-config-is-script? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
-    (let* ([extension (if (equal? script/job "scripts") ".sh" ".yaml")]
-           [with/no-warmup (if with-warmup? "WW" "NW")]
-           [fname-template (if generate-traces? "~aP-~a-~a-traces" "~aP-~a-~a")])
-      (values
-        (if (equal? pycket/racket "racket")
-            (format "racket-~a" bench-name)
-            (format fname-template old/new with/no-warmup bench-name))
-        extension))))
+    (let* ([extension (if is-script? ".sh" ".yaml")]
+           [dir (if is-script? "scripts" "jobs")]
+           [fname-template (if generate-traces? "~a~a-~a-~a-traces" "~a~a-~a-~a")])
+      (if (not (kubejob-config-is-pycket? config))
+        ;; racket
+        (format "~a-~a.~a" (repr-internal RACKET-REPR) bench-name extension)
+        ;; pycket
+        (format fname-template
+                (new/old-repr (kubejob-config-is-new? config))
+                (repr-internal PYCKET-REPR)
+                (warmup-repr (kubejob-config-with-warmup? config))
+                bench-name)))))
 
 (define job-template
 "apiVersion: batch/v1
@@ -337,10 +346,10 @@ spec:
 
   ;; Generate stuff
   (when gen-scripts
-    (generate benchmarks script/job pycket/racket old/new with-warmup? generate-traces? gen-script))
+    (generate benchmarks is-script? pycket/racket old/new with-warmup? generate-traces? gen-script))
 
   (when gen-jobs
-    (generate benchmarks script/job pycket/racket old/new with-warmup? generate-traces? gen-job docker-image))
+    (generate benchmarks is-script? pycket/racket old/new with-warmup? generate-traces? gen-job docker-image))
 
   (let ([traces/warmup (if generate-traces? "traces" (format "~a-warmup" (if with-warmup? "with" "no")))])
     (if (equal? pycket/racket "racket")
