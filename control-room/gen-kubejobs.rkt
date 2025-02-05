@@ -158,45 +158,44 @@ BINARY_DIR=~a
 ;; pycket-variant is either "new" or "old"
 ;; with/no-warmup is either "with" or "no"
 ;; gen-traces? is a boolean
-(define (pycket-script bench-name pycket-variant with/no-warmup gen-traces?)
+(define (pycket-script bench-name is-new? with-warmup? gen-traces?)
   #;(when (and (equal? with/no-warmup "no") gen-traces?)
     (error 'pycket-launcher "Cannot generate traces without warmup"))
-  (let ([pycket-binary (if (equal? pycket-variant "new")
-                            "pycket-c-linklets"
-                            "pycket-c")]
-        [time-output-file
-          (if gen-traces?
-            (format "~aP-~a-~a-traces.rst" pycket-variant with/no-warmup bench-name)
-            (format "~aP-~a-~a.rst" pycket-variant with/no-warmup bench-name))])
-    (if (equal? with/no-warmup "no")
+  (let* ([pycket-binary (if is-new? "pycket-c-linklets" "pycket-c")]
+         ;; e.g. NP-WW (new pycket with warmup)
+         [pycket-variant-repr (format "~a~a-~a"
+                                      (new/old-repr is-new?) (repr-internal PYCKET-REPR)
+                                      (warmup-repr with-warmup?))]
+         [time-output-file-name* (format "~a-~a" pycket-variant-repr bench-name)]
+         [time-output-file-name (format "~a~a.rst" time-output-file-name* (if gen-traces? "-traces" ""))])
+    (if (not with-warmup?)
       ;; no warmup -- single run in a for loop
       (if (not gen-traces?)
           (format "
 for i in `seq 1 ~a`;
 do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
-done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file)
+done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
           ;; If we want traces in a no-warmup setup, then we have to get only the last one
-          ;; We don't want to get OUTER-ITERATIONS many trace files (each >100M)
+          ;; We don't want to get OUTER-ITERATIONS many trace files (e.g. each >100M)
           (format "
 for i in `seq 1 ~a`;
 do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done
 
-PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 
-\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file
-                       pycket-binary bench-name with/no-warmup
-                       pycket-binary bench-name time-output-file
+\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name
+                       time-output-file-name*
+                       pycket-binary bench-name time-output-file-name
                        )
           )
 
-
       ;; with warmup -- multiple runs within the benchmark source
       (if gen-traces?
-        (format "PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
-                pycket-variant bench-name pycket-binary bench-name time-output-file)
+        (format "PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
+                time-output-file-name* pycket-binary bench-name time-output-file)
         (format "$BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
                 pycket-binary bench-name time-output-file))
     )))
@@ -248,8 +247,8 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
               (format "~a~a~a~a"
                 (preamble is-pycket? with-warmup? generate-traces?)
                 (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED")
-                (launch-function bench-name old/new with/no-warmup generate-traces?)
-                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "COMPLETED"))))))
+                (launch-function bench-name is-new? with-warmup? generate-traces?)
+                (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "COMPLETED"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; GENERATOR FOR KUBERNETES JOBS ;;;;;;;;;;;;;;;;;;;;;;
