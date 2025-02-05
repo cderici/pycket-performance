@@ -76,6 +76,12 @@
 (define (warmup-repr with-warmup?)
   (repr-internal (if with-warmup? w-warmup-repr no-warmup-repr)))
 
+(define (warmup-human-repr with-warmup?)
+  (repr-human (if with-warmup? w-warmup-repr no-warmup-repr)))
+
+(define (pycket/racket-human-repr is-pycket?)
+  (repr-human (if is-pycket? PYCKET-REPR RACKET-REPR)))
+
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
 (define OUTER-ITERATIONS 500)
@@ -98,16 +104,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;; GENERATOR FOR BASH SCRIPTS ;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; pycket-variant is either "new" or "old"
-;; with/no-warmup is either "with" or "no"
-;; gen-traces? is a boolean
-(define (preamble pycket/racket with/no-warmup gen-traces?)
+;; all inputs are bool
+(define (preamble is-pycket? with-warmup? generate-traces?)
+  (when (and generate-traces? (not is-pycket?))
+    (error 'preamble "something is wrong, racket and generate-traces? can't be both true"))
   (let ([base-pre "#!/bin/bash
 
 NFS_SHARE=/mnt/nfs_share
 PYCKET_DIR=/opt/pycket
 BENCH_DIR=$NFS_SHARE/benchmarks"])
-    (if gen-traces?
+    (if generate-traces?
+      ;; script to generate traces
       (format "~a
 TRACES_DIR=$BENCH_DIR/traces
 SOURCE_DIR=$BENCH_DIR/src/for-traces
@@ -115,12 +122,16 @@ OUTPUT_DIR=$BENCH_DIR/timings-traces
 BINARY_DIR=$PYCKET_DIR
 
 " base-pre)
+      ;; no traces, regular script
       (format "~a
-SOURCE_DIR=$BENCH_DIR/src/~a-warmup
+SOURCE_DIR=$BENCH_DIR/src/~a
 OUTPUT_DIR=$BENCH_DIR/timings-~a
 BINARY_DIR=~a
 
-" base-pre with/no-warmup pycket/racket (if (equal? pycket/racket "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
+" base-pre
+  (warmup-human-repr with-warmup?)
+  (pycket/racket-human-repr is-pycket?)
+  (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
 (define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
   (let ([warmup/traces (if gen-traces? "traces" (if (equal? with/no-warmup "with") "WW" "NW")]
@@ -222,14 +233,14 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
         [is-new? (kubejob-config-is-new? config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
-    (let* ([launch-function (if is-pycket? pycket-script racket-script)])
-      (let-values ([(file-path extension) (generate-file-path config)])
-        (values (format "scripts/~a~a" file-path extension)
-                (format "~a~a~a~a"
-                  (preamble pycket/racket-human with/no-warmup generate-traces?)
-                  (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "STARTED")
-                  (launch-function bench-name old/new with/no-warmup generate-traces?)
-                  (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "COMPLETED")))))))
+    (let ([launch-function (if is-pycket? pycket-script racket-script)]
+          [file-path (generate-file-path config)])
+      (values file-path
+              (format "~a~a~a~a"
+                (preamble is-pycket? with-warmup? generate-traces?)
+                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "STARTED")
+                (launch-function bench-name old/new with/no-warmup generate-traces?)
+                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "COMPLETED"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; GENERATOR FOR KUBERNETES JOBS ;;;;;;;;;;;;;;;;;;;;;;
