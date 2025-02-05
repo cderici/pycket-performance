@@ -62,6 +62,8 @@
 (define NEW-INTERNAL "N")
 (define NEW-HUMAN "new")
 
+(define TRACES-INTERNAL "T")
+
 (struct repr (internal human))
 (define PYCKET-REPR (repr PYCKET-INTERNAL PYCKET-HUMAN))
 (define RACKET-REPR (repr RACKET-INTERNAL RACKET-HUMAN))
@@ -81,6 +83,9 @@
 
 (define (pycket/racket-human-repr is-pycket?)
   (repr-human (if is-pycket? PYCKET-REPR RACKET-REPR)))
+
+(define (pycket/racket-internal-repr is-pycket?)
+  (repr-internal (if is-pycket? PYCKET-REPR RACKET-REPR)))
 
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
@@ -133,14 +138,18 @@ BINARY_DIR=~a
   (pycket/racket-human-repr is-pycket?)
   (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
-(define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
-  (let ([warmup/traces (if gen-traces? "traces" (if (equal? with/no-warmup "with") "WW" "NW")]
-        [p/r-internal (if (equal? pycket/racket "racket") "R" "P")])
-    (if (equal? pycket/racket "racket")
+(define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed)
+  (let ([warmup/traces (if gen-traces? TRACES-INTERNAL (warmup-repr with-warmup?))]
+        [pycket/racket (pycket/racket-internal-repr is-pycket?)])
+    (if (not is-pycket?)
+        ;; racket
         (format "echo \"~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
             pycket/racket bench-name started/completed)
+        ;; pycket
         (format "echo \"~a~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-                old/new pycket/racket warmup/traces bench-name started/completed))))
+                (new/old-repr is-new?) pycket/racket
+                warmup/traces bench-name
+                started/completed))))
 
 (define (racket-script bench-name _1 _2 _3)
   (format "$BINARY_DIR/racket $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/R-~a.rst\n\n"
@@ -238,7 +247,7 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
       (values file-path
               (format "~a~a~a~a"
                 (preamble is-pycket? with-warmup? generate-traces?)
-                (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "STARTED")
+                (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED")
                 (launch-function bench-name old/new with/no-warmup generate-traces?)
                 (log-line old/new pycket/racket bench-name with/no-warmup generate-traces? "COMPLETED"))))))
 
