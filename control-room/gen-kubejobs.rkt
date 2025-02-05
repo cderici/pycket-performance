@@ -47,6 +47,22 @@
                       'simplex
                      ))
 
+(define PYCKET-INTERNAL "P")
+(define RACKET-INTERNAL "R")
+(define WITH-WARMUP-INTERNAL "WW")
+(define NO-WARMUP-INTERNAL "NW")
+
+(define PYCKET-HUMAN "pycket")
+(define RACKET-HUMAN "racket")
+(define WITH-WARMUP-HUMAN "with-warmup")
+(define NO-WARMUP-HUMAN "no-warmup")
+
+(struct repr (internal human))
+(define pycket-repr (repr PYCKET-INTERNAL PYCKET-HUMAN))
+(define racket-repr (repr RACKET-INTERNAL RACKET-HUMAN))
+(define w-warmup-repr (repr WITH-WARMUP-INTERNAL WITH-WARMUP-HUMAN))
+(define no-warmup-repr (repr NO-WARMUP-INTERNAL NO-WARMUP-HUMAN))
+
 ;; The default number of outer iterations for the benchmarks
 ;; running with NO warmup (for loop in the script)
 (define OUTER-ITERATIONS 500)
@@ -94,15 +110,16 @@ BINARY_DIR=~a
 " base-pre with/no-warmup pycket/racket (if (equal? pycket/racket "racket") "$PYCKET_DIR/racket/bin" "$PYCKET_DIR")))))
 
 (define (log-line old/new pycket/racket bench-name with/no-warmup gen-traces? started/completed)
-  (let ([warmup/traces (if gen-traces? "traces" (format "~a-warmup" with/no-warmup))])
+  (let ([warmup/traces (if gen-traces? "traces" (if (equal? with/no-warmup "with") "WW" "NW")]
+        [p/r-internal (if (equal? pycket/racket "racket") "R" "P")])
     (if (equal? pycket/racket "racket")
         (format "echo \"~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
             pycket/racket bench-name started/completed)
-        (format "echo \"~a ~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-                old/new pycket/racket bench-name warmup/traces started/completed))))
+        (format "echo \"~a~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+                old/new pycket/racket warmup/traces bench-name started/completed))))
 
 (define (racket-launcher bench-name _1 _2 _3)
-  (format "$BINARY_DIR/racket $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/racket-~a.rst\n\n"
+  (format "$BINARY_DIR/racket $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/R-~a.rst\n\n"
                 bench-name bench-name))
 
 ;; pycket-variant is either "new" or "old"
@@ -116,8 +133,8 @@ BINARY_DIR=~a
                             "pycket-c")]
         [time-output-file
           (if gen-traces?
-            (format "~a-pycket-~a-traces-~a-warmup.rst" pycket-variant bench-name with/no-warmup)
-            (format "~a-pycket-~a-~a-warmup.rst" pycket-variant bench-name with/no-warmup))])
+            (format "~aP-~a-~a-traces.rst" pycket-variant with/no-warmup bench-name)
+            (format "~aP-~a-~a.rst" pycket-variant with/no-warmup bench-name))])
     (if (equal? with/no-warmup "no")
       ;; no warmup -- single run in a for loop
       (if (not gen-traces?)
@@ -151,12 +168,37 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a-~a-~a-warmup.trace $B
                 pycket-binary bench-name time-output-file))
     )))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;; MAIN GENERATOR ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(struct kubejob-config (bench-name script/job pycket/racket old/new with-warmup? gen-traces? docker-image))
+;; is-script? : bool (false -> it's a job)
+;; is-pycket? : bool (false -> it's racket)
+;; is-new?    : bool (false -> it's old)
+(struct kubelob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
 
-(define (make-config bench-name script/job pycket/racket old/new with-warmup? gen-traces? [docker-image #f])
-  (kubejob-config bench-name script/job pycket/racket old/new with-warmup? gen-traces? docker-image))
+(define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? [docker-image #f])
+  (kubejob-config bench-name script/job pycket/racket is-new? with-warmup? gen-traces? docker-image))
 
+
+;; benchmarks is a list of benchmark names
+;; is-script? : bool (false -> it's a job)
+;; is-pycket? : bool (false -> it's racket)
+;; is-new?    : bool (false -> it's old)
+;; with-warmup? is a boolean
+;; gen-traces? is a boolean
+;; gen-func is a function that takes a kubejob-config and produces a either a script or job.
+;;   gen-func should return two values: the path of the file generated and the file contents
+(define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? gen-func [DOCKER-IMAGE #f])
+  (for ([b (in-list benchmarks)])
+    (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? DOCKER-IMAGE)])
+      (let-values ([(path content) (gen-func config)])
+            (call-with-output-file path
+              (lambda (bop)
+                (display content bop))
+              #:exists 'replace)
+            #;(displayln (format "generating: ~a -- with contents:\n\n~a\n"
+                              path content))))))
 
 ;; Takes a benchmark config and produces two values
 ;; 1. the path of the script file
@@ -249,54 +291,30 @@ spec:
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;; MAIN GENERATOR ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; benchmarks is a list of benchmark names
-;; script/job is either "scripts" or "jobs"
-;; pycket/racket is either "racket" or "pycket"
-;; old/new is either "old" or "new"
-;; with-warmup? is a boolean
-;; gen-traces? is a boolean
-;; gen-func is a function that takes a kubejob-config and produces a either a script or job.
-;;   gen-func should return two values: the path of the file generated and the file contents
-(define (generate benchmarks script/job pycket/racket old/new with-warmup? gen-traces? gen-func [DOCKER-IMAGE #f])
-  (for ([b (in-list benchmarks)])
-    (let ([config (make-config b script/job pycket/racket old/new with-warmup? gen-traces? DOCKER-IMAGE)])
-      (let-values ([(path content) (gen-func config)])
-            (call-with-output-file path
-              (lambda (bop)
-                (display content bop))
-              #:exists 'replace)
-            #;(displayln (format "generating: ~a -- with contents:\n\n~a\n"
-                              path content))))))
-
 (module+ main
   (require racket/cmdline)
 
-  (define pycket/racket-human #f) ;; "racket" or "pycket"
-  (define old/new-human "new") ;; "old" or "new"
+  (define pycket/racket #f) ;; "racket" or "pycket"
+  (define old/new "new") ;; "old" or "new"
   (define with-warmup? #f)
   (define generate-traces? #f)
 
   (define master-script-name "kube-apply-all-jobs.sh")
   (define racket-master-script "run-rackets.sh")
 
-  (define gen-scripts #f)
-  (define gen-jobs #f)
+  (define is-script? #t)
 
   (command-line
    #:once-each
-   [("-s" "--scripts") "generate scripts" (set! gen-scripts #t)]
-   [("-j" "--jobs") "generate kubernetes jobs" (set! gen-jobs #t)]
+   [("-s" "--scripts") "generate scripts" (set! is-script? #t)]
+   [("-j" "--jobs") "generate kubernetes jobs" (set! is-script? #t)]
    #:once-any
-   [("-r" "--racket") "generate racket scripts" (set! pycket/racket-human "racket") (set! with-warmup? #t)]
-   [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket-human "pycket")]
+   [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket") (set! with-warmup? #t)]
+   [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
    #;[("--run-all-script") "generate the run-all.sh script for the sh files in the directory" (set! sys 'runall-script)]
    #:once-any
-   [("-o" "--old") "old" (set! old/new-human "old")]
-   [("-n" "--new") "new" (set! old/new-human "new")]
+   [("-o" "--old") "old" (set! old/new "old")]
+   [("-n" "--new") "new" (set! old/new "new")]
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
@@ -304,21 +322,19 @@ spec:
    #:args ([docker-image #f])
 
   ;; Validate arguments
-  (unless (or gen-scripts gen-jobs)
-    (error 'main "Please specify either --scripts or --jobs"))
-  (unless (memv pycket/racket-human '("pycket" "racket"))
-      (error 'gen-script "system must be either \"pycket\" or \"racket\""))
-  (unless (memv old/new-human '("old" "new"))
-      (error 'gen-script "old/new must be either \"old\" or \"new\""))
+  (unless (memv pycket/racket '("pycket" "racket"))
+      (error 'pycket/racket "system must be either \"pycket\" or \"racket\""))
+  (unless (memv old/new '("old" "new"))
+      (error 'old/new "must be either \"old\" or \"new\""))
   (unless (boolean? with-warmup?)
-      (error 'gen-script "with-warmup? must be a boolean"))
+      (error 'with-warmup? "must be a boolean"))
   (unless (boolean? generate-traces?)
-      (error 'gen-script "generate-traces? must be a boolean"))
+      (error 'generate-traces? "must be a boolean"))
 
-  (define old/new (if (equal? old/new-human "old") "O" "N"))
-  (define pycket/racket (if (equal? pycket/racket-human "pycket") "P" "R"))
+  (define is-new? (equal? old/new "new"))
+  (define is-pycket? (equal? pycket/racket "pycket"))
 
-  (define script/job (if gen-scripts "scripts" "jobs"))
+
   ;; Generate stuff
   (when gen-scripts
     (generate benchmarks script/job pycket/racket old/new with-warmup? generate-traces? gen-script))
