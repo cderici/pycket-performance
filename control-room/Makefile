@@ -16,9 +16,6 @@ JOBS_TARGET_DIR  := $(BENCHMARK_DIR)/jobs
 ####################### TOP CONTROLS ############################
 #################################################################
 
-.PHONY: all
-all: gen-all stage-all
-
 .PHONY: gen-all
 gen-all: all-racket all-pycket
 
@@ -44,14 +41,18 @@ stage-jobs:
 #################################################################
 
 .PHONY: all-pycket-scripts
-all-pycket-scripts: all-pycket-new-scripts all-pycket-old-scripts
+all-pycket-scripts: all-new-pycket-scripts all-old-pycket-scripts
+
+.PHONY: all-pycket-trace-scripts
+all-pycket-trace-scripts: all-new-pycket-trace-scripts all-old-pycket-trace-scripts
 
 # Pycket NEW scripts
 
-.PHONY: all-pycket-new-scripts
-all-pycket-new-scripts: pycket-new-with-warmup-scripts pycket-new-no-warmup-scripts pycket-new-with-warmup-traces-scripts pycket-new-no-warmup-traces-scripts
+.PHONY: all-new-pycket-scripts
+all-new-pycket-scripts: pycket-new-with-warmup-scripts pycket-new-no-warmup-scripts
 
-
+.PHONY: all-new-pycket-trace-scripts
+all-new-pycket-trace-scripts: pycket-new-with-warmup-traces-scripts pycket-new-no-warmup-traces-scripts
 
 .PHONY: pycket-new-with-warmup-scripts
 pycket-new-with-warmup-scripts:
@@ -62,20 +63,21 @@ pycket-new-no-warmup-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --no-warmup
 
 .PHONY: pycket-new-with-warmup-traces-scripts
-pycket-new-traces-scripts:
+pycket-new-with-warmup-traces-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --with-warmup
 
 .PHONY: pycket-new-no-warmup-traces-scripts
-pycket-new-traces-scripts:
+pycket-new-no-warmup-traces-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --no-warmup
 
 
 # Pycket OLD scripts
 
-.PHONY: all-pycket-old-scripts
-all-pycket-old-scripts: pycket-old-with-warmup-scripts pycket-old-no-warmup-scripts pycket-old-with-warmup-traces-scripts pycket-old-no-warmup-traces-scripts
+.PHONY: all-old-pycket-scripts
+all-old-pycket-scripts: pycket-old-with-warmup-scripts pycket-old-no-warmup-scripts
 
-
+.PHONY: all-old-pycket-trace-scripts
+all-old-pycket-trace-scripts: pycket-old-with-warmup-traces-scripts pycket-old-no-warmup-traces-scripts
 
 .PHONY: pycket-old-with-warmup-scripts
 pycket-old-with-warmup-scripts:
@@ -86,11 +88,11 @@ pycket-old-no-warmup-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --no-warmup
 
 .PHONY: pycket-old-with-warmup-traces-scripts
-pycket-old-traces-scripts:
+pycket-old-with-warmup-traces-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --with-warmup
 
 .PHONY: pycket-old-no-warmup-traces-scripts
-pycket-old-traces-scripts:
+pycket-old-no-warmup-traces-scripts:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --no-warmup
 
 
@@ -107,10 +109,17 @@ racket-scripts:
 .PHONY: all-pycket-jobs
 all-pycket-jobs: all-pycket-new-jobs all-pycket-old-jobs
 
+.PHONY: all-pycket-trace-jobs
+all-pycket-trace-jobs: all-pycket-new-trace-jobs all-pycket-old-trace-jobs
+
 # Pycket NEW jobs
 
 .PHONY: all-pycket-new-jobs
-all-pycket-new-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs pycket-new-traces-jobs
+all-pycket-new-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs 
+
+.PHONY: all-pycket-new-trace-jobs
+all-pycket-new-trace-jobs: pycket-new-with-warmup-traces-jobs pycket-new-no-warmup-traces-jobs
+
 
 .PHONY: pycket-new-with-warmup-jobs
 pycket-new-with-warmup-jobs:
@@ -120,14 +129,21 @@ pycket-new-with-warmup-jobs:
 pycket-new-no-warmup-jobs:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j --no-warmup $(DOCKER_IMAGE)
 
-.PHONY: pycket-new-traces-jobs
-pycket-new-traces-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t $(DOCKER_IMAGE)
+.PHONY: pycket-new-with-warmup-traces-jobs
+pycket-new-with-warmup-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t --with-warmup $(DOCKER_IMAGE)
+
+.PHONY: pycket-new-no-warmup-traces-jobs
+pycket-new-no-warmup-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -j -t --no-warmup $(DOCKER_IMAGE)
 
 # Pycket OLD jobs
 
 .PHONY: all-pycket-old-jobs
-all-pycket-old-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs pycket-old-traces-jobs
+all-pycket-old-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs
+
+.PHONY: all-pycket-old-trace-jobs
+all-pycket-old-trace-jobs: pycket-old-with-warmup-traces-jobs pycket-old-no-warmup-traces-jobs
 
 .PHONY: pycket-old-with-warmup-jobs
 pycket-old-with-warmup-jobs:
@@ -137,9 +153,13 @@ pycket-old-with-warmup-jobs:
 pycket-old-no-warmup-jobs:
 	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j --no-warmup $(DOCKER_IMAGE)
 
-.PHONY: pycket-old-traces-jobs
-pycket-old-traces-jobs:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -t -j $(DOCKER_IMAGE)
+.PHONY: pycket-old-with-warmup-traces-jobs
+pycket-old-with-warmup-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j -t --with-warmup $(DOCKER_IMAGE)
+
+.PHONY: pycket-old-no-warmup-traces-jobs
+pycket-old-no-warmup-traces-jobs:
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -j -t --no-warmup $(DOCKER_IMAGE)
 
 # Racket jobs
 
@@ -163,6 +183,9 @@ clean-benchmark-site-jobs:
 .PHONY: activate
 activate:
 	chmod 755 $(SCRIPTS_DIR)/*.sh
+
+.PHONY: clear
+clear: clean
 
 .PHONY: clean
 clean: clean-scripts clean-jobs
