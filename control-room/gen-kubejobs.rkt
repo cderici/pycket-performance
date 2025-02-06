@@ -63,6 +63,7 @@
 (define NEW-HUMAN "new")
 
 (define TRACES-INTERNAL "T")
+(define TRACES-HUMAN "traces")
 
 (struct repr (internal human))
 (define PYCKET-REPR (repr PYCKET-INTERNAL PYCKET-HUMAN))
@@ -71,6 +72,7 @@
 (define no-warmup-repr (repr NO-WARMUP-INTERNAL NO-WARMUP-HUMAN))
 (define new-repr (repr NEW-INTERNAL NEW-HUMAN))
 (define old-repr (repr OLD-INTERNAL OLD-HUMAN))
+(define TRACES-REPR (repr TRACES-INTERNAL TRACES-HUMAN))
 
 (define (new/old-repr is-new?)
   (repr-internal (if is-new? new-repr old-repr)))
@@ -196,9 +198,9 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a 
       ;; with warmup -- multiple runs within the benchmark source
       (if gen-traces?
         (format "PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
-                time-output-file-name* pycket-binary bench-name time-output-file)
+                time-output-file-name* pycket-binary bench-name time-output-file-name)
         (format "$BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
-                pycket-binary bench-name time-output-file))
+                pycket-binary bench-name time-output-file-name))
     )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -208,10 +210,10 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a 
 ;; is-script? : bool (false -> it's a job)
 ;; is-pycket? : bool (false -> it's racket)
 ;; is-new?    : bool (false -> it's old)
-(struct kubelob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
+(struct kubejob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
 
 (define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? [docker-image #f])
-  (kubejob-config bench-name script/job pycket/racket is-new? with-warmup? gen-traces? docker-image))
+  (kubejob-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
 
 
 ;; benchmarks is a list of benchmark names
@@ -243,8 +245,8 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a 
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
     (let ([launch-function (if is-pycket? pycket-script racket-script)])
-      (let-values ([(file-path extension) (generate-file-path config)])
-        (values (string-append file-path "." extension)
+      (let-values ([(file-name extension) (generate-file-path config)])
+        (values (string-append "scripts/" file-name "." extension)
                 (format "~a~a~a~a"
                   (preamble is-pycket? with-warmup? generate-traces?)
                   (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED")
@@ -260,7 +262,6 @@ PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a 
         [is-script? (kubejob-config-is-script? config)]
         [generate-traces? (kubejob-config-gen-traces? config)])
     (let* ([extension (if is-script? "sh" "yaml")]
-           [dir (if is-script? "scripts" "jobs")]
            [fname-template (if generate-traces? "~a~a-~a-~a-traces" "~a~a-~a-~a")])
       (if (not (kubejob-config-is-pycket? config))
         ;; racket
@@ -308,7 +309,7 @@ spec:
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)]
         [docker-image (kubejob-config-docker-image config)])
-    (let-values ([(file-path extension) (generate-file-path config)])
+    (let-values ([(file-name extension) (generate-file-path config)])
       (let*
         ([pycket-variant-repr (format "~a~a-~a-~a"
                                       (new/old-repr is-new?) (repr-internal PYCKET-REPR)
@@ -318,9 +319,9 @@ spec:
            (if (not is-pycket?)
              (format "~a-~a" (repr-internal RACKET-REPR) bench-name)
              pycket-job-name)])
-          (values (string-append file-path "." extension)
+          (values (string-append "jobs/" file-name "." extension)
                   (format job-template
-                    job-name job-name docker-image (string-append file-path ".sh")))))))
+                    job-name job-name docker-image (string-append file-name ".sh")))))))
 
 (module+ main
   (require racket/cmdline)
@@ -338,7 +339,8 @@ spec:
   (command-line
    #:once-each
    [("-s" "--scripts") "generate scripts" (set! is-script? #t)]
-   [("-j" "--jobs") "generate kubernetes jobs" (set! is-script? #t)]
+   [("-j" "--jobs") "generate kubernetes jobs" (set! is-script? #f)]
+   [("-t" "--traces") "with warmup, extract the JIT log" (set! generate-traces? #t)]
    #:once-any
    [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket") (set! with-warmup? #t)]
    [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
@@ -349,7 +351,6 @@ spec:
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
-   [("-t" "--traces") "with warmup, extract the JIT log" (set! generate-traces? #t)]
    #:args ([docker-image #f])
 
   ;; Validate arguments
@@ -367,16 +368,19 @@ spec:
 
 
   ;; Generate stuff
-  (when gen-scripts
-    (generate benchmarks is-script? pycket/racket old/new with-warmup? generate-traces? gen-script))
+  (when is-script?
+    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? gen-script))
 
-  (when gen-jobs
-    (generate benchmarks is-script? pycket/racket old/new with-warmup? generate-traces? gen-job docker-image))
+  (when (not is-script?)
+    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? gen-job docker-image))
 
-  (let ([traces/warmup (if generate-traces? "traces" (format "~a-warmup" (if with-warmup? "with" "no")))])
+  (let ([script/job (if is-script? "scripts" "jobs")])
     (if (equal? pycket/racket "racket")
       (printf "\nDONE GENERATING ~a ~a\n\n" pycket/racket script/job)
-      (printf "\nDONE GENERATING ~a ~a ~a ~a\n\n" pycket/racket old/new script/job traces/warmup)))
+      (printf "\nDONE GENERATING ~a ~a ~a ~a ~a\n\n"
+              pycket/racket old/new script/job (warmup-human-repr with-warmup?)
+              (if generate-traces? (repr-human TRACES-REPR) ""))))
+
 
    ;; submit all script
    #;(call-with-output-file master-script-name
@@ -389,6 +393,6 @@ spec:
                (displayln (format "qsub ~a" p) op))))))
      #:exists 'replace)
 
-   (when gen-scripts
+   (when is-script?
     (and (system "chmod 755 scripts/*.sh") (void)))
    ))
