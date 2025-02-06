@@ -23,8 +23,8 @@
                       'string
                       'sumfp
                       'sumloop
-                      ;'sumrecfp
-                      'sumrec
+                      ; 'sumrecfp
+                      ; 'sumrec
                       'sum
                       'takl
                       'tak
@@ -344,7 +344,6 @@ spec:
    #:once-any
    [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket") (set! with-warmup? #t)]
    [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
-   #;[("--run-all-script") "generate the run-all.sh script for the sh files in the directory" (set! sys 'runall-script)]
    #:once-any
    [("-o" "--old") "old" (set! old/new "old")]
    [("-n" "--new") "new" (set! old/new "new")]
@@ -366,7 +365,6 @@ spec:
   (define is-new? (equal? old/new "new"))
   (define is-pycket? (equal? pycket/racket "pycket"))
 
-
   ;; Generate stuff
   (when is-script?
     (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? gen-script))
@@ -380,18 +378,6 @@ spec:
       (printf "\nDONE GENERATING ~a ~a ~a ~a ~a\n\n"
               pycket/racket old/new script/job (warmup-human-repr with-warmup?)
               (if generate-traces? (repr-human TRACES-REPR) ""))))
-
-
-   ;; submit all script
-   #;(call-with-output-file master-script-name
-     (lambda (op)
-       (display "#!/bin/bash \n\n" op)
-       (for ([p (directory-list)])
-         (when (path-has-extension? p #".sh")
-           (let ([p-str (path->string (file-name-from-path p))])
-             (unless (string-contains? p-str "run-all")
-               (displayln (format "qsub ~a" p) op))))))
-     #:exists 'replace)
 
    (when is-script?
     (and (system "chmod 755 scripts/*.sh") (void)))
