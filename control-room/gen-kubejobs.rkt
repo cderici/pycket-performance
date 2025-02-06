@@ -316,9 +316,10 @@ spec:
                                       (warmup-repr with-warmup?) bench-name)]
          [pycket-job-name (format "~a~a" pycket-variant-repr (if generate-traces? "-traces" ""))]
          [job-name
-           (if (not is-pycket?)
-             (format "~a-~a" (repr-internal RACKET-REPR) bench-name)
-             pycket-job-name)])
+           (string-downcase
+             (if (not is-pycket?)
+               (format "~a-~a" (repr-internal RACKET-REPR) bench-name)
+               pycket-job-name))])
           (values (string-append "jobs/" file-name "." extension)
                   (format job-template
                     job-name job-name docker-image (string-append file-name ".sh")))))))
