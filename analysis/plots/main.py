@@ -20,15 +20,15 @@ The file names have two variations for Pycket and Racket.
 
 - Pycket benchmark files are formatted as follows:
 
-    (new|old)-pycket-[benchmark-name]-(with|no)-warmup.rst
+    (NO)P-(WN)W-[benchmark-name].rst
 
-    e.g. "new-pycket-ack-with-warmup.rst", "old-pycket-ack-no-warmup.rst"
+    e.g. "NP-WW-ack.rst", "OP-NW-ack.rst"
 
  - Racket benchmark files are formatted as follows:
 
-    racket-[benchmark-name].rst
+    R-[benchmark-name].rst
 
-    e.g. "racket-ack.rst"
+    e.g. "R-ack.rst"
 
 The general regexps used are below.
 
@@ -138,7 +138,7 @@ def main():
 
     if relative_plot:
         outfile_name += f" relative to {args.relative}"
-
+    
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name = outfile_name[3:]
 
@@ -156,10 +156,10 @@ def main():
     if b_param == "all":
         for b_name in benchmark_collection.benchmark_names:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            benchmark_collection.plot(configs, filename, relative_plot, b_name)
+            benchmark_collection.plot(configs, filename, rel_config, relative_interpreter, b_name)
         return
 
-    benchmark_collection.plot(configs, outfile_name, rel_config, args.single_benchmark_name)
+    benchmark_collection.plot(configs, outfile_name, rel_config, relative_interpreter, args.single_benchmark_name)
 
 if __name__ == "__main__":
     main()

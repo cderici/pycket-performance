@@ -12,8 +12,8 @@ NEW_PYCKET = "NP"
 OLD_PYCKET = "OP"
 RACKET = "R"
 
-BENCH_FILE_PYCKET_REGEXP = r'(new|old)-pycket?-(.*?)(?:-(with|no)-warmup)?.rst'
-BENCH_FILE_RACKET_REGEXP = 'racket-(.*?).rst'
+BENCH_FILE_PYCKET_REGEXP = r'(N|O)P-(W|N)W-(.*?).rst'
+BENCH_FILE_RACKET_REGEXP = r'R-(.*?).rst'
 
 RESULT_CPU_REGEXP = r'RESULT-cpu:\s+([\d.]+)'
 RESULT_GC_REGEXP = r'RESULT-gc:\s+([\d.]+)'
@@ -60,14 +60,14 @@ class BenchmarkIngress:
 
         Returns:
             Three values for:
-                - interpreter; "new" | "old" | "racket"
+                - interpreter; NEW_PYCKET | OLD_PYCKET | RACKET
                 - benchmark name
                 - warmup setting; bool
         """
         if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
-            interpreter, benchmark_name, warmup = match.groups()
-            sys = NEW_PYCKET if interpreter == "new" else OLD_PYCKET
-            return sys, benchmark_name, warmup == "with"
+            _interpreter, warmup, benchmark_name = match.groups()
+            interpreter = NEW_PYCKET if _interpreter == 'N' else OLD_PYCKET
+            return interpreter, benchmark_name, warmup == 'W'
         elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
             return RACKET, match.group(1), False
 
@@ -460,11 +460,11 @@ class BenchmarkCollection():
         group_gap = 0.2
 
         colors = {
-            "New Pycket With Warmup": "#0c590c",
-            "New Pycket No Warmup": "#5ae8b8",
-            "Old Pycket With Warmup": "#941616",
-            "Old Pycket No Warmup": "#f77474",
-            "Racket With Warmup": "#4558e6" # FIXME: "Racket"
+            f"{NEW_PYCKET} With Warmup": "#0c590c",
+            f"{NEW_PYCKET} No Warmup": "#5ae8b8",
+            f"{OLD_PYCKET} With Warmup": "#941616",
+            f"{OLD_PYCKET} No Warmup": "#f77474",
+            f"{RACKET} With Warmup": "#4558e6" # FIXME: "Racket"
         }
 
         cmap = plt.cm.get_cmap('hsv', 50)
@@ -606,10 +606,9 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, configs, output_file, rel_config=None, single_benchmark_name=None):
+    def plot(self, configs, output_file, rel_config=None, relative_interpreter=None, single_benchmark_name=None):
         print(f"Generating comparison plot data for {output_file}...")
-        rel_config_plot_label = rel_config.interpreter if rel_config else ""
-
+        rel_config_plot_label = relative_interpreter
         if not single_benchmark_name:
             benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
             return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label)
