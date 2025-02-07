@@ -55,4 +55,6 @@ clean:
 
 .PHONY: all-singles
 all-singles:
-	$(PYTHON) main.py $(DIR) --single all
+	$(PYTHON) main.py $(DIR) --new --old --racket --single all --relative racket
+
+
