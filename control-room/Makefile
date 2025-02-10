@@ -107,18 +107,18 @@ racket-scripts:
 #################################################################
 
 .PHONY: all-pycket-jobs
-all-pycket-jobs: all-pycket-new-jobs all-pycket-old-jobs
+all-pycket-jobs: all-new-pycket-jobs all-old-pycket-jobs
 
 .PHONY: all-pycket-trace-jobs
-all-pycket-trace-jobs: all-pycket-new-trace-jobs all-pycket-old-trace-jobs
+all-pycket-trace-jobs: all-new-pycket-trace-jobs all-old-pycket-trace-jobs
 
 # Pycket NEW jobs
 
-.PHONY: all-pycket-new-jobs
-all-pycket-new-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs 
+.PHONY: all-new-pycket-jobs
+all-new-pycket-jobs: pycket-new-with-warmup-jobs pycket-new-no-warmup-jobs
 
-.PHONY: all-pycket-new-trace-jobs
-all-pycket-new-trace-jobs: pycket-new-with-warmup-traces-jobs pycket-new-no-warmup-traces-jobs
+.PHONY: all-new-pycket-trace-jobs
+all-new-pycket-trace-jobs: pycket-new-with-warmup-traces-jobs pycket-new-no-warmup-traces-jobs
 
 
 .PHONY: pycket-new-with-warmup-jobs
@@ -139,11 +139,11 @@ pycket-new-no-warmup-traces-jobs:
 
 # Pycket OLD jobs
 
-.PHONY: all-pycket-old-jobs
-all-pycket-old-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs
+.PHONY: all-old-pycket-jobs
+all-old-pycket-jobs: pycket-old-with-warmup-jobs pycket-old-no-warmup-jobs
 
-.PHONY: all-pycket-old-trace-jobs
-all-pycket-old-trace-jobs: pycket-old-with-warmup-traces-jobs pycket-old-no-warmup-traces-jobs
+.PHONY: all-old-pycket-trace-jobs
+all-old-pycket-trace-jobs: pycket-old-with-warmup-traces-jobs pycket-old-no-warmup-traces-jobs
 
 .PHONY: pycket-old-with-warmup-jobs
 pycket-old-with-warmup-jobs:
