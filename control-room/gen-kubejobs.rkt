@@ -184,9 +184,9 @@ mkdir -p $TRACES_DIR/~a
 
 for i in `seq 1 ~a`;
 do
-  PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a/$i.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+  PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a/~a-$i.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done
-\n\n" time-output-file-name* OUTER-ITERATIONS time-output-file-name*
+\n\n" time-output-file-name* OUTER-ITERATIONS time-output-file-name* time-output-file-name*
       pycket-binary bench-name time-output-file-name
             )
           )
