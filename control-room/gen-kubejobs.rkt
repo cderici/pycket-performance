@@ -140,16 +140,16 @@ BINARY_DIR=~a
   (pycket/racket-human-repr is-pycket?)
   (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
-(define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed)
+(define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed run-label)
   (let ([warmup/traces (if gen-traces? TRACES-INTERNAL (warmup-repr with-warmup?))]
         [pycket/racket (pycket/racket-internal-repr is-pycket?)])
     (if (not is-pycket?)
         ;; racket
-        (format "echo \"~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-            pycket/racket bench-name started/completed)
+        (format "echo \"~a : ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+                run-label pycket/racket bench-name started/completed)
         ;; pycket
-        (format "echo \"~a~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
-                (new/old-repr is-new?) pycket/racket
+        (format "echo \"~a : ~a~a ~a ~a - `date '+%Y-%m-%d %H:%M:%S'` - ~a on pod: $POD_NAME\" >> $BENCH_DIR/experiment-status\n\n"
+                run-label (new/old-repr is-new?) pycket/racket
                 warmup/traces bench-name
                 started/completed))))
 
@@ -206,10 +206,11 @@ done
 ;; is-script? : bool (false -> it's a job)
 ;; is-pycket? : bool (false -> it's racket)
 ;; is-new?    : bool (false -> it's old)
-(struct kubejob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
+;; run-label  : string
+(struct kubejob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label))
 
-(define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? [docker-image #f])
-  (kubejob-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image))
+(define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? run-label [docker-image #f])
+  (kubejob-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label))
 
 
 ;; benchmarks is a list of benchmark names
@@ -220,9 +221,10 @@ done
 ;; gen-traces? is a boolean
 ;; gen-func is a function that takes a kubejob-config and produces a either a script or job.
 ;;   gen-func should return two values: the path of the file generated and the file contents
-(define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? gen-func [DOCKER-IMAGE #f])
+;; run-label is a string
+(define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? run-label gen-func [DOCKER-IMAGE #f])
   (for ([b (in-list benchmarks)])
-    (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? DOCKER-IMAGE)])
+    (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? run-label DOCKER-IMAGE)])
       (let-values ([(path content) (gen-func config)])
             (call-with-output-file path
               (lambda (bop)
@@ -239,15 +241,16 @@ done
         [is-pycket? (kubejob-config-is-pycket? config)]
         [is-new? (kubejob-config-is-new? config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
-        [generate-traces? (kubejob-config-gen-traces? config)])
+        [generate-traces? (kubejob-config-gen-traces? config)]
+        [run-label (kubejob-config-run-label config)])
     (let ([launch-function (if is-pycket? pycket-script racket-script)])
       (let-values ([(file-name extension) (generate-file-path config)])
         (values (string-append "scripts/" file-name "." extension)
                 (format "~a~a~a~a"
                   (preamble is-pycket? with-warmup? generate-traces?)
-                  (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED")
+                  (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED" run-label)
                   (launch-function bench-name is-new? with-warmup? generate-traces?)
-                  (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "COMPLETED")))))))
+                  (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "COMPLETED" run-label)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;; GENERATOR FOR KUBERNETES JOBS ;;;;;;;;;;;;;;;;;;;;;;
@@ -332,12 +335,14 @@ spec:
   (define racket-master-script "run-rackets.sh")
 
   (define is-script? #t)
+  (define run-label "no-label")
 
   (command-line
    #:once-each
    [("-s" "--scripts") "generate scripts" (set! is-script? #t)]
    [("-j" "--jobs") "generate kubernetes jobs" (set! is-script? #f)]
    [("-t" "--traces") "with warmup, extract the JIT log" (set! generate-traces? #t)]
+   [("-l" "--run-label") label "stamp the run with this label" (set! run-label label)]
    #:once-any
    [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket") (set! with-warmup? #t)]
    [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
@@ -364,10 +369,10 @@ spec:
 
   ;; Generate stuff
   (when is-script?
-    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? gen-script))
+    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-script))
 
   (when (not is-script?)
-    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? gen-job docker-image))
+    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-job docker-image))
 
   (let ([script/job (if is-script? "scripts" "jobs")])
     (if (equal? pycket/racket "racket")

@@ -56,19 +56,19 @@ all-new-pycket-trace-scripts: pycket-new-with-warmup-traces-scripts pycket-new-n
 
 .PHONY: pycket-new-with-warmup-scripts
 pycket-new-with-warmup-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --with-warmup -l $(LABEL)
 
 .PHONY: pycket-new-no-warmup-scripts
 pycket-new-no-warmup-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s --no-warmup -l $(LABEL)
 
 .PHONY: pycket-new-with-warmup-traces-scripts
 pycket-new-with-warmup-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --with-warmup -l $(LABEL)
 
 .PHONY: pycket-new-no-warmup-traces-scripts
 pycket-new-no-warmup-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -n -s -t --no-warmup -l $(LABEL)
 
 
 # Pycket OLD scripts
@@ -81,26 +81,26 @@ all-old-pycket-trace-scripts: pycket-old-with-warmup-traces-scripts pycket-old-n
 
 .PHONY: pycket-old-with-warmup-scripts
 pycket-old-with-warmup-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --with-warmup -l $(LABEL)
 
 .PHONY: pycket-old-no-warmup-scripts
 pycket-old-no-warmup-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s --no-warmup -l $(LABEL)
 
 .PHONY: pycket-old-with-warmup-traces-scripts
 pycket-old-with-warmup-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --with-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --with-warmup -l $(LABEL)
 
 .PHONY: pycket-old-no-warmup-traces-scripts
 pycket-old-no-warmup-traces-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --no-warmup
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -p -o -s -t --no-warmup -l $(LABEL)
 
 
 # Racket scripts
 
 .PHONY: racket-scripts
 racket-scripts:
-	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -s
+	$(RACKET_EXECUTABLE) $(GENERATOR_SCRIPT) -r -s -l $(LABEL)
 
 #################################################################
 ####################### KUBERNETES JOBS #########################
