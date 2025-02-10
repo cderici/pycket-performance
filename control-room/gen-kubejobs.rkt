@@ -179,20 +179,16 @@ for i in `seq 1 ~a`;
 do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
-          ;; If we want traces in a no-warmup setup, then we have to get only the last one
-          ;; We don't want to get OUTER-ITERATIONS many trace files (e.g. each >100M)
           (format "
+mkdir -p $TRACES_DIR/~a
+
 for i in `seq 1 ~a`;
 do
-  $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+  PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a/$i.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done
-
-PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
-
-\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name
-                       time-output-file-name*
-                       pycket-binary bench-name time-output-file-name
-                       )
+\n\n" time-output-file-name* OUTER-ITERATIONS time-output-file-name*
+      pycket-binary bench-name time-output-file-name
+            )
           )
 
       ;; with warmup -- multiple runs within the benchmark source
