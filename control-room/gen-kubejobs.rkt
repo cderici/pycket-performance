@@ -124,11 +124,11 @@ BENCH_DIR=$NFS_SHARE/benchmarks"])
       ;; script to generate traces
       (format "~a
 TRACES_DIR=$BENCH_DIR/traces
-SOURCE_DIR=$BENCH_DIR/src/for-traces
+SOURCE_DIR=$BENCH_DIR/src/~a
 OUTPUT_DIR=$BENCH_DIR/timings-traces
 BINARY_DIR=$PYCKET_DIR
 
-" base-pre)
+" base-pre (warmup-human-repr with-warmup?))
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
