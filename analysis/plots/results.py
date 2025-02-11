@@ -1,6 +1,8 @@
 import os, re
 import numpy as np
 import matplotlib.pyplot as plt
+from numpy.core.fromnumeric import std
+import scipy.stats as stats
 
 from pathlib import Path
 from scipy.interpolate import make_interp_spline
@@ -103,6 +105,16 @@ class BenchmarkIngress:
 
         return collection
 
+class Result:
+    def __init__(self, values):
+        np_arr = np.array(values)
+        self.all_values = values
+        self.best = np.min(np_arr)
+        self.mean = np.mean(np_arr)
+        self.std_dev = np.std(np_arr, ddof=1)
+        self.sample_size = len(np_arr)
+        t_score = stats.t.ppf(0.975, df=self.sample_size-1) # 95% confidence interval
+        self.ci_half_range = t_score * (self.std_dev / np.sqrt(self.sample_size))
 
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
@@ -122,10 +134,9 @@ class BenchmarkResult:
         self.gc_values = gc_values
         self.total_values = total_values
 
-        # Precompute the best values for each category
-        self.cpu_best = sorted(cpu_values)[0] if cpu_values else None
-        self.gc_best = sorted(gc_values)[0] if gc_values else None
-        self.total_best = sorted(total_values)[0] if total_values else None
+        self.cpu_result = Result(cpu_values)
+        self.gc_result = Result(gc_values)
+        self.total_result = Result(total_values)
 
     def get_series(self, category):
         """Returns the series for the given category.
@@ -156,17 +167,17 @@ class BenchmarkResult:
         Returns:
             float
         """
-        if category == "cpu" and self.cpu_best:
-            return self.cpu_best
-        elif category == "gc" and self.gc_best:
-            return self.gc_best
-        elif category == "total" and self.total_best:
-            return self.total_best
+        if category == "cpu" and self.cpu_result.best:
+            return self.cpu_result.best
+        elif category == "gc" and self.gc_result.best:
+            return self.gc_result.best
+        elif category == "total" and self.total_result.best:
+            return self.total_result.best
 
         raise ValueError(f"Invalid category: {category}")
 
     def __str__(self):
-        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_best}, GC {self.gc_best}, Total {self.total_best}"
+        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_result.best}, GC {self.gc_result.best}, Total {self.total_result.best}"
 
 class CompareConfig():
     def __init__(self, interpreter, with_warmup, category="total", relative=False):
