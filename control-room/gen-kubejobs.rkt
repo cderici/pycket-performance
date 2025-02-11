@@ -170,7 +170,7 @@ BINARY_DIR=~a
                                       (new/old-repr is-new?) (repr-internal PYCKET-REPR)
                                       (warmup-repr with-warmup?))]
          [time-output-file-name* (format "~a-~a" pycket-variant-repr bench-name)]
-         [time-output-file-name (format "~a~a.rst" time-output-file-name* (if gen-traces? "-traces" ""))])
+         [time-output-file-name (format "~a.rst" time-output-file-name*)])
     (if (not with-warmup?)
       ;; no warmup -- single run in a for loop
       (if (not gen-traces?)
