@@ -61,6 +61,8 @@ def main():
     parser.add_argument("--relative", choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
     parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects. Use \"all\" for producing plots for all benchmarks.")
 
+    parser.add_argument("--label", dest="run_label", default="", type=str, help="label for experiment, e.g. 4th-run to show in plots")
+
     args = parser.parse_args()
 
     b_param = args.single_benchmark_name
@@ -73,7 +75,7 @@ def main():
 
     # If relative is set, make sure it's one of the interpreters that are given
     relative_plot = False
-    relative_interpreter = None
+    relative_interpreter = ''
     if args.relative:
         relative_plot = True
         err = False
@@ -156,10 +158,10 @@ def main():
     if b_param == "all":
         for b_name in benchmark_collection.benchmark_names:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            benchmark_collection.plot(configs, filename, rel_config, relative_interpreter, b_name)
+            benchmark_collection.plot(configs, filename, rel_config, relative_interpreter, b_name, args.run_label)
         return
 
-    benchmark_collection.plot(configs, outfile_name, rel_config, relative_interpreter, args.single_benchmark_name)
+    benchmark_collection.plot(configs, outfile_name, rel_config, relative_interpreter, args.single_benchmark_name, args.run_label)
 
 if __name__ == "__main__":
     main()

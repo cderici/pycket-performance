@@ -1,9 +1,9 @@
 import os, re
-
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.interpolate import make_interp_spline
 
+from pathlib import Path
+from scipy.interpolate import make_interp_spline
 from random import uniform as ru
 
 plt.style.use('fivethirtyeight')
@@ -367,7 +367,7 @@ class BenchmarkCollection():
         }
         return base_shades[base_color]
 
-    def _plot_single_benchmark(self, single_benchmark_name, y_values, output_file, relative_label=""):
+    def _plot_single_benchmark(self, single_benchmark_name, y_values, output_file, relative_label="", run_tag=""):
         """Plots the given plottable benchmark data produced by the _compare_on_single_benchmark() method and saves it to a png file.
 
         This is a line plot, where each configuration has a line for the benchmark, x-axis is the number of iterations.
@@ -395,8 +395,8 @@ class BenchmarkCollection():
         # Plot the data
         plt.figure(figsize=(12, 8))
         # Prepare a caption using output_file
-        caption = output_file.replace("_", " ")[:-4]
-        plt.title(caption)
+        caption = Path(output_file.replace("_", " ")).stem
+        plt.title(f"{run_tag} : {caption}")
         plt.xlabel("Iterations")
         plt.ylabel("Runtime (ms)")
 
@@ -435,7 +435,7 @@ class BenchmarkCollection():
         plt.savefig(output_file)
         plt.close()
 
-    def _plot_multi_benchmark(self, benchmark_names, y_values, output_file, relative_label=""):
+    def _plot_multi_benchmark(self, benchmark_names, y_values, output_file, relative_label="", run_tag=""):
         """Plots the given plottable benchmark data produced by the _compare_on_multi_benchmark() method and saves it to a png file.
 
         This is a bar plot, where each benchmark has a bar for each configuration.
@@ -450,9 +450,12 @@ class BenchmarkCollection():
         """
         # Plot the data
         plt.figure(figsize=(12, 8))
+
         # Prepare a caption using output_file
-        caption = output_file.replace("_", " ")[:-4]
-        plt.xlabel(caption)
+        # Turn _ into a whitespace so it'll look better in plot caption
+        caption = Path(output_file.replace("_", " ")).stem
+        plt.title(f"{run_tag} : {caption}")
+        # plt.xlabel(f"{run_tag}-{caption}")
         plt.ylabel("Runtime (ms)")
 
         x = np.arange(len(benchmark_names))
@@ -606,13 +609,13 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, configs, output_file, rel_config=None, relative_interpreter=None, single_benchmark_name=None):
+    def plot(self, configs, output_file, rel_config=None, relative_interpreter="", single_benchmark_name=None, run_tag=""):
         print(f"Generating comparison plot data for {output_file}...")
         rel_config_plot_label = relative_interpreter
         if not single_benchmark_name:
             benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
-            return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label)
+            return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label, run_tag)
 
         y_values = self._compare_on_single_benchmark(single_benchmark_name, configs, rel_config)
-        return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label)
+        return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label, run_tag)
 

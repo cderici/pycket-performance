@@ -10,7 +10,7 @@ all-non-relative: new-vs-old # new-vs-old-vs-racket # new-vs-racket
 
 .PHONY: new-vs-old
 new-vs-old:
-	$(PYTHON) main.py $(DIR) --new --old --with-warmup
+	$(PYTHON) main.py $(DIR) --new --old --with-warmup --label $(LABEL)
 
 # .PHONY: new-vs-racket
 # new-vs-racket:
@@ -26,15 +26,15 @@ all-relative: new-vs-racket-relative-racket new-vs-old-relative-racket old-vs-ra
 
 .PHONY: new-vs-racket-relative-racket
 new-vs-racket-relative-racket:
-	$(PYTHON) main.py $(DIR) --new --racket --with-warmup --relative racket
+	$(PYTHON) main.py $(DIR) --new --racket --with-warmup --relative racket --label $(LABEL)
 
 .PHONY: new-vs-old-relative-racket
 new-vs-old-relative-racket:
-	$(PYTHON) main.py $(DIR) --new --old --racket --with-warmup --relative racket
+	$(PYTHON) main.py $(DIR) --new --old --racket --with-warmup --relative racket --label $(LABEL)
 
 .PHONY: old-vs-racket-relative-racket
 old-vs-racket-relative-racket:
-	$(PYTHON) main.py $(DIR) --old --racket --with-warmup --relative racket
+	$(PYTHON) main.py $(DIR) --old --racket --with-warmup --relative racket --label $(LABEL)
 
 # No Warmup
 
@@ -43,11 +43,11 @@ all-no-warmup: new-vs-old-no-warmup new-vs-old-vs-racket-no-warmup
 
 .PHONY: new-vs-old-no-warmup
 new-vs-old-no-warmup:
-	$(PYTHON) main.py $(DIR) --new --old --no-warmup
+	$(PYTHON) main.py $(DIR) --new --old --no-warmup --label $(LABEL)
 
 .PHONY: new-vs-old-vs-racket-no-warmup
 new-vs-old-vs-racket-no-warmup:
-	$(PYTHON) main.py $(DIR) --new --old --racket --no-warmup --relative racket
+	$(PYTHON) main.py $(DIR) --new --old --racket --no-warmup --relative racket --label $(LABEL)
 
 .PHONY: clean
 clean:
@@ -55,6 +55,6 @@ clean:
 
 .PHONY: all-singles
 all-singles:
-	$(PYTHON) main.py $(DIR) --new --old --racket --single all --relative racket
+	$(PYTHON) main.py $(DIR) --new --old --racket --single all --relative racket --label $(LABEL)
 
 
