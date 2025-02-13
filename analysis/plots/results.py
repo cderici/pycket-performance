@@ -231,6 +231,17 @@ class PlotConfig:
 
         self.interp_configs = interp_configs
 
+    def plot_single(self, benchmark_results):
+        return
+
+    def plot_multi(self, benchmark_results):
+        return
+
+    def plot(self, benchmark_results):
+        if self.is_single:
+            return self.plot_single(benchmark_results)
+        return self.plot_multi(benchmark_results)
+
 # Pre-built configuration objects
 NP_WW_Config = partial(CompareConfig.make, NP_WW, True)
 NP_NW_Config = partial(CompareConfig.make, NP_NW, False)
@@ -669,8 +680,23 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
+    def collect_benchmark_results(self, benchmark_names, interp_config):
+        return {}
+
     def generate_plots(self, plot_configs):
-        return
+        for plot_config in plot_configs:
+            self.generate_plot(plot_config)
+
+    def generate_plot(self, plot_config):
+        print(f"Generating comparison plot data for {plot_config.output_file_name}...")
+
+        # Collect benchmark results for given interp_configs and benchmark names
+        benchmark_results = self.collect_benchmark_results(plot_config.benchmark_names,
+                                                           plot_config.interp_config)
+
+        plot_config.plot(benchmark_results)
+
+
 
     # def plot(self, configs, output_file, relative_interpreter="", single_benchmark_name=None, run_tag=""):
     #     print(f"Generating comparison plot data for {output_file}...")
