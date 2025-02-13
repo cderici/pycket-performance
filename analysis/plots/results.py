@@ -78,12 +78,21 @@ class BenchmarkIngress:
         """
         if match := re.match(BENCH_FILE_PYCKET_REGEXP, file_name):
             _interpreter, warmup, benchmark_name = match.groups()
-            interpreter = NEW_PYCKET if _interpreter == 'N' else OLD_PYCKET
-            return interpreter, benchmark_name, warmup == 'W'
-        elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
-            return RACKET, match.group(1), False
+            if _interpreter == 'N' and warmup == 'W':
+                return NP_WW, benchmark_name
+            elif _interpreter == 'N' and warmup == 'N':
+                return NP_NW, benchmark_name
+            elif _interpreter == 'O' and warmup == 'W':
+                return OP_WW, benchmark_name
+            elif _interpreter == 'O' and warmup == 'N':
+                return OP_NW, benchmark_name
+            else:
+                raise Exception(f"Unrecognized format in file_name: {file_name}")
 
-        return None, None, None
+        elif match := re.match(BENCH_FILE_RACKET_REGEXP, file_name):
+            return R, match.group(1)
+
+        return None, None
 
     def consume_create_collection(self):
         """Consumes the benchmark data from the directory path and produces a BenchmarkCollection object.
@@ -99,7 +108,7 @@ class BenchmarkIngress:
         for filename in os.listdir(self.directory):
             if filename.endswith('.rst'):
                 file_path = os.path.join(self.directory, filename)
-                interpreter, benchmark_name, is_with_warmup = self._analyze_filename(filename)
+                interp, benchmark_name = self._analyze_filename(filename)
                 if benchmark_name in self.excluded_benchmarks:
                     print(f"Excluding benchmark {benchmark_name}")
                     continue
@@ -109,7 +118,7 @@ class BenchmarkIngress:
                     cpu_times, gc_times, total_times = self._parse_and_extract(file_path)
 
                     # Create a BenchmarkResult object and add it to the collection
-                    bResult = BenchmarkResult(benchmark_name, interpreter, is_with_warmup, cpu_times, gc_times, total_times)
+                    bResult = BenchmarkResult(benchmark_name, interp, cpu_times, gc_times, total_times)
 
                     collection.add_benchmark(bResult)
 
@@ -129,7 +138,7 @@ class Result:
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
     """
-    def __init__(self, benchmark_name, interpreter, with_warmup, cpu_values, gc_values, total_values):
+    def __init__(self, benchmark_name, interp, cpu_values, gc_values, total_values):
         """
         Args:
             benchmark_name: str
@@ -138,8 +147,7 @@ class BenchmarkResult:
             value: float
         """
         self.name = benchmark_name
-        self.interpreter = interpreter
-        self.with_warmup = with_warmup
+        self.interpreter = interp
         self.cpu_values = cpu_values
         self.gc_values = gc_values
         self.total_values = total_values
@@ -217,7 +225,7 @@ class PlotConfig:
                  relative_interp=None,
                  is_single=False,
                  benchmark_names=[],
-                 compare_configs=[],
+                 compare_configs={},
                  caption=""):
         # A single plot is we compare multiple interpreters on a single benchmark
         # Single plots are graph plots (whereas non-single ones are bar charts)
@@ -273,7 +281,7 @@ class BenchmarkCollection():
     """
     def __init__(self):
         self.benchmark_results_dict = {}
-        self.benchmark_names = {}
+        self.benchmark_names = {} # TODO: initialize with set()
 
     def add_benchmark(self, b_result):
         """
