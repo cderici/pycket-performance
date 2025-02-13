@@ -146,8 +146,8 @@ class BenchmarkResult:
             with_warmup: bool
             value: float
         """
-        self.name = benchmark_name
-        self.interpreter = interp
+        self.benchmark_name = benchmark_name
+        self.interp = interp
         self.cpu_values = cpu_values
         self.gc_values = gc_values
         self.total_values = total_values
@@ -155,6 +155,24 @@ class BenchmarkResult:
         self.cpu_result = Result(cpu_values)
         self.gc_result = Result(gc_values)
         self.total_result = Result(total_values)
+
+    def get_result(self, category):
+        """Returns the Result object for the given category.
+
+        Args:
+            category: str, "cpu" | "gc" | "total"
+
+        Returns:
+            list of float
+        """
+        if category == "cpu":
+            return self.cpu_result
+        elif category == "gc":
+            return self.gc_result
+        elif category == "total":
+            return self.total_result
+
+        raise ValueError(f"Invalid category: {category}")
 
     def get_series(self, category):
         """Returns the series for the given category.
@@ -195,7 +213,7 @@ class BenchmarkResult:
         raise ValueError(f"Invalid category: {category}")
 
     def __str__(self):
-        return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_result.best}, GC {self.gc_result.best}, Total {self.total_result.best}"
+        return f"{self.interp} {self.benchmark_name} : CPU {self.cpu_result.best}, GC {self.gc_result.best}, Total {self.total_result.best}"
 
 class CompareConfig():
     def __init__(self, interp, with_warmup, category="total"):
@@ -248,6 +266,18 @@ class PlotConfig:
         self.relative_interp = relative_interp
 
     def plot_single(self, benchmark_results):
+        """
+        self.benchmark_names
+        self.compare_configs
+        benchmark_results
+        """
+        plt.figure(figsize=(12, 8))
+        # Prepare a caption using output_file
+        caption = Path(self.output_file_name.replace("_", " ")).stem
+        plt.title(f"{self.caption} : {caption}")
+        plt.xlabel("Iterations")
+        plt.ylabel("Runtime (ms)")
+
         return
 
     def plot_multi(self, benchmark_results):
@@ -275,24 +305,39 @@ CONFIG_SELECT = {
 
 class BenchmarkCollection():
     """Keeps a collection of BenchmarkResult objects, and knows how to sort, process, and analyse them.
-
-    Use:
-        - compare(): to produce a plot comparing the benchmarks.
     """
     def __init__(self):
+        """
+            benchmark_results_dict
+                {
+                    NP_WW: {
+                                ack: BenchmarkResult
+                                tail: BenchmarkResult
+                                ...
+                            },
+                    OP_NW: {
+                                ack: BenchmarkResult
+                                ...
+                            },
+                    ...
+                }
+        """
         self.benchmark_results_dict = {}
-        self.benchmark_names = {} # TODO: initialize with set()
+        self.benchmark_names = set()
 
     def add_benchmark(self, b_result):
         """
         Args:
             benchmark: BenchmarkResult
         """
-        b_label = self._get_b_label(b_result.interpreter, b_result.name, b_result.with_warmup)
-        self.benchmark_results_dict[b_label] = b_result
+        if b_result.interp in self.benchmark_results_dict:
+            self.benchmark_results_dict[b_result.interp][b_result.benchmark_name] = b_result
+        else:
+            self.benchmark_results_dict[b_result.interp] = {b_result.benchmark_name: b_result}
 
-        self.benchmark_names[b_result.name] = None
+        self.benchmark_names.add(b_result.name)
 
+    # TODO: remove
     def _get_b_label(self, interpreter, benchmark_name, with_warmup):
         if interpreter == RACKET:
             return f"{interpreter}_{benchmark_name}"
@@ -696,8 +741,51 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def collect_benchmark_results(self, benchmark_names, interp_config):
-        return {}
+    def collect_benchmark_results(self, benchmark_names, compare_configs):
+        """
+            Gather benchmark results from the collection for the given benchmarks and compare_configs
+
+            Args:
+                benchmark_names [str]: which benchmarks' results are being plotted
+                compare_configs set(CompareConfig): which interp settings are requested (NP_WW, OP_NW, etc ...)
+
+            Returns:
+                TODO: not sure yet
+        """
+
+        """
+            b_results
+                {
+                    NP_WW: {
+                                ack: Result
+                                tail: Result
+                                ...
+                            },
+                    OP_NW: {
+                                ack: Result
+                                ...
+                            },
+                    ...
+                }
+
+        """
+        b_results = {}
+        for compare_config in compare_configs:
+
+            if compare_config.interp not in self.benchmark_names:
+                raise Exception(f"Results for {compare_config.interp} not found in the result collection")
+
+            # Initialize b_results
+            b_results[compare_config.interp] = {}
+
+            for benchmark_name in benchmark_names:
+                # Get BenchmarkResult object that contains results for all categories
+                b_result = self.benchmark_results_dict[compare_config.interp][benchmark_name]
+                # Get Result object that contains values and stats for the requested category
+                result = b_result.get_result(compare_config.category)
+                b_results[compare_config.interp][b_result.benchmark_name] = result
+
+        return b_results
 
     def generate_plots(self, plot_configs):
         for plot_config in plot_configs:
