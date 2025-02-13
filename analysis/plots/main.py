@@ -1,8 +1,8 @@
 import os
 import argparse
 
-from results import NEW_PYCKET, OLD_PYCKET, RACKET, \
-                    CompareConfig, BenchmarkIngress
+from results import *
+
 
 """
 This is for processing and plotting runtime duration results for benchmarks
@@ -38,6 +38,14 @@ file name formats (ignores other files).
 It extracts the runtime for each benchmark and processes the durations (at the time of writing this, only takes the average), and plots the results using mathplotlib.
 """
 
+RELATIVE_INTERPRETER_CHOICES = {
+    "new-with-warmup"   : NP_WW,
+    "new-no-warmup"     : NP_NW,
+    "old-with-warmup"   : OP_WW,
+    "old-no-warmup"     : OP_NW,
+    "racket"            : R,
+}
+
 def main():
     parser = argparse.ArgumentParser(description="Process benchmark results and generate plots.")
     parser.add_argument("directory", help="Path to the directory containing benchmark result files.")
@@ -59,6 +67,7 @@ def main():
     parser.set_defaults(category_type="total")
 
     parser.add_argument("--relative", choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
+
     parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects. Use \"all\" for producing plots for all benchmarks.")
 
     parser.add_argument("--label", dest="run_label", default="", type=str, help="label for experiment, e.g. 4th-run to show in plots")
@@ -73,74 +82,35 @@ def main():
     except:
         parser.error("Please specify at least one interpreter to include in the comparison.")
 
-    # If relative is set, make sure it's one of the interpreters that are given
-    relative_plot = False
-    relative_interpreter = ''
-    if args.relative:
-        relative_plot = True
-        err = False
-        # This is a bit hacky, but we have do it unless we want users to type
-        # "New Pycket" instead of "new" on the command line
-        if "new" in args.relative:
-            relative_interpreter = NEW_PYCKET
-            if NEW_PYCKET not in args.interpreters:
-                err = True
-        elif "old" in args.relative:
-            relative_interpreter = OLD_PYCKET
-            if OLD_PYCKET not in args.interpreters:
-                err = True
-        elif "racket" in args.relative:
-            relative_interpreter = RACKET
-            if RACKET not in args.interpreters:
-                err = True
+    # Determine which interpreter settings user wants to see, e.g. NP_WW
+    user_selected_interps = []
+    for user_param_interp in args.interpreters:
+        if user_param_interp == RACKET:
+            user_selected_interps.append(R)
+        elif user_selected_interps == NEW_PYCKET:
+            user_selected_interps.append(NP_WW if args.with_warmup else NP_NW)
+        elif user_selected_interps == OLD_PYCKET:
+            user_selected_interps.append(OP_WW if args.with_warmup else OP_NW)
+        else:
+            raise Exception(f"Unrecognized interpreter selected: {user_param_interp}")
 
-        if err:
-            parser.error("The relative interpreter must be one of the interpreters that are being compared.")
-
-    # Generate CompareConfigs based on the given arguments
-    rel_config = None
+    # Generate CompareConfigs for selected interpreter settings
     configs = []
     outfile_name = ""
-    for interpreter in args.interpreters:
-        # Handle racket separately
-        if interpreter == RACKET:
-            continue
+    relative_interp = ""
+    for selected_interp in user_selected_interps:
+        config = CONFIG_SELECT[selected_interp](args.category_type)
+        config.relative = selected_interp == RELATIVE_INTERPRETER_CHOICES[args.relative]
+        configs.append(config)
 
-        # With warmup and no-warmup are not mutually exclusive. They can be both
-        # set, in which case we will plot both configurations.
-        if args.with_warmup:
-            outfile_name += f"vs {interpreter}WW "
-            relative = relative_plot and interpreter == relative_interpreter and "with-warmup" in args.relative
-            c  = CompareConfig(interpreter, True, args.category_type, relative)
-            if relative:
-                rel_config = c
-            else:
-                configs.append(c)
+        outfile_name += f"vs {config.interp}"
+        if config.relative:
+            relative_interp = config.interp
 
-        if args.no_warmup:
-            outfile_name += f"vs {interpreter}NW "
-            relative = relative_plot and interpreter == relative_interpreter and "no-warmup" in args.relative
-            c = CompareConfig(interpreter, False, args.category_type, relative)
-            if relative:
-                rel_config = c
-            else:
-                configs.append(c)
-
-    # Handle racket separately (because of warmup stuff)
-    if RACKET in args.interpreters:
-        outfile_name += f"vs {RACKET} "
-        relative = relative_plot and RACKET == relative_interpreter and "racket" in args.relative
-        c = CompareConfig(RACKET, True, args.category_type, relative)
-        if relative:
-            rel_config = c
-        else:
-            configs.append(c)
+    if relative_interp:
+        outfile_name += f" relative to {relative_interp}"
 
     outfile_name += f"{args.category_type} times"
-
-    if relative_plot:
-        outfile_name += f" relative to {args.relative}"
-    
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name = outfile_name[3:]
 
@@ -148,20 +118,26 @@ def main():
         # Check the singles dir, and create if it doesn't exist
         if not os.path.exists("singles"):
             os.makedirs("singles")
-    else:
-        outfile_name += ".png"
 
     HARDCODED_EXCLUDES = ["sumrec"]
 
+    # Ingest the data from the given directory
     benchmark_collection = BenchmarkIngress(args.directory, excluded_benchmarks=HARDCODED_EXCLUDES).consume_create_collection()
 
-    if b_param == "all":
-        for b_name in benchmark_collection.benchmark_names:
+    # Generate PlotConfig(s)
+    plot_configs = []
+    if not b_param:
+        # single (multi) plot config with benchmark_names = everything we have got in the directory
+        filename = f"{outfile_name}.png"
+        plot_configs.append(PlotConfig(filename, False, benchmark_collection.benchmark_names, configs, args.run_label))
+    else:
+        # possibly multiple (e.g. "all") single plot configs
+        benchmarks = benchmark_collection.benchmark_names if b_param == "all" else [b_param]
+        for b_name in benchmarks:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            benchmark_collection.plot(configs, filename, rel_config, relative_interpreter, b_name, args.run_label)
-        return
+            plot_configs.append(PlotConfig(filename, True, [b_name], configs, args.run_label))
 
-    benchmark_collection.plot(configs, outfile_name, rel_config, relative_interpreter, args.single_benchmark_name, args.run_label)
+    benchmark_collection.generate_plots(plot_configs)
 
 if __name__ == "__main__":
     main()

@@ -7,8 +7,18 @@ import scipy.stats as stats
 from pathlib import Path
 from scipy.interpolate import make_interp_spline
 from random import uniform as ru
+from functools import partial
 
 plt.style.use('fivethirtyeight')
+
+# Interpreter Identifiers
+NP_WW = "New Pycket With Warmup"
+NP_NW = "New Pycket No Warmup"
+OP_WW = "Old Pycket With Warmup"
+OP_NW = "Old Pycket No Warmup"
+R     = "Racket"
+
+VALID_INTERPRETERS = [NP_WW, NP_NW, OP_WW, OP_NW, R]
 
 NEW_PYCKET = "NP"
 OLD_PYCKET = "OP"
@@ -180,22 +190,61 @@ class BenchmarkResult:
         return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_result.best}, GC {self.gc_result.best}, Total {self.total_result.best}"
 
 class CompareConfig():
-    def __init__(self, interpreter, with_warmup, category="total", relative=False):
+    def __init__(self, interp, with_warmup, category="total", relative=False):
         """
         Args:
-            interpreter: str
+            interp: str
             with_warmup: bool
             category: str, can be "cpu", "gc", "total"
                 (default: "total")
         """
-        self.interpreter = interpreter
+        self.interp = interp
         self.with_warmup = with_warmup
         self.category = category
         self.relative = relative
-
+    
+    @staticmethod
+    def make(interp, with_warmup, category="total", relative=False):
+        return CompareConfig(interp, with_warmup, category, relative)
 
     def __str__(self):
-        return f"{self.interpreter} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
+        return f"{self.interp} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
+
+# A config object for precisely one plot file
+class PlotConfig:
+    def __init__(self, output_file_name, is_single=False, benchmark_names=[], interp_configs=[], caption=""):
+        # A single plot is we compare multiple interpreters on a single benchmark
+        # Single plots are graph plots (whereas non-single ones are bar charts)
+        self.is_single = is_single
+
+        # Check if benchmark_names contain only one benchmark if this is a single plot
+        if is_single:
+            assert len(benchmark_names) == 1, f"multiple benchmarks are given for a \"single\" plot: {benchmark_names}"
+
+        self.benchmark_names = benchmark_names
+        self.output_file_name = output_file_name
+        self.caption = caption
+
+        # Validate interpreters
+        for i in interp_configs:
+            assert i in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
+
+        self.interp_configs = interp_configs
+
+# Pre-built configuration objects
+NP_WW_Config = partial(CompareConfig.make, NP_WW, True)
+NP_NW_Config = partial(CompareConfig.make, NP_NW, False)
+OP_WW_Config = partial(CompareConfig.make, OP_WW, True)
+OP_NW_Config = partial(CompareConfig.make, OP_NW, False)
+R_Config     = partial(CompareConfig.make, R, True)
+
+CONFIG_SELECT = {
+    NP_WW: NP_WW_Config,
+    NP_NW: NP_NW_Config,
+    OP_WW: OP_WW_Config,
+    OP_NW: OP_NW_Config,
+    R: R_Config,
+}
 
 class BenchmarkCollection():
     """Keeps a collection of BenchmarkResult objects, and knows how to sort, process, and analyse them.
@@ -620,13 +669,16 @@ class BenchmarkCollection():
 
         return sorted_benchmark_names, y_values
 
-    def plot(self, configs, output_file, rel_config=None, relative_interpreter="", single_benchmark_name=None, run_tag=""):
-        print(f"Generating comparison plot data for {output_file}...")
-        rel_config_plot_label = relative_interpreter
-        if not single_benchmark_name:
-            benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
-            return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label, run_tag)
+    def generate_plots(self, plot_configs):
+        return
 
-        y_values = self._compare_on_single_benchmark(single_benchmark_name, configs, rel_config)
-        return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label, run_tag)
+    # def plot(self, configs, output_file, relative_interpreter="", single_benchmark_name=None, run_tag=""):
+    #     print(f"Generating comparison plot data for {output_file}...")
+    #     rel_config_plot_label = relative_interpreter
+    #     if not single_benchmark_name:
+    #         benchmark_names, y_values = self._compare_on_multi_benchmark(configs, rel_config, single_benchmark_name)
+    #         return self._plot_multi_benchmark(benchmark_names, y_values, output_file, rel_config_plot_label, run_tag)
+    #
+    #     y_values = self._compare_on_single_benchmark(single_benchmark_name, configs, rel_config)
+    #     return self._plot_single_benchmark(single_benchmark_name, y_values, output_file, rel_config_plot_label, run_tag)
 
