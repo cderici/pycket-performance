@@ -190,10 +190,10 @@ class BenchmarkResult:
         return f"{self.interpreter} {self.name} {'With Warmup' if self.with_warmup else 'No Warmup'}: CPU {self.cpu_result.best}, GC {self.gc_result.best}, Total {self.total_result.best}"
 
 class CompareConfig():
-    def __init__(self, interp, with_warmup, category="total", relative=False):
+    def __init__(self, interp, with_warmup, category="total"):
         """
         Args:
-            interp: str
+            interp: str (NP_WW, NP_NW, ...)
             with_warmup: bool
             category: str, can be "cpu", "gc", "total"
                 (default: "total")
@@ -201,18 +201,24 @@ class CompareConfig():
         self.interp = interp
         self.with_warmup = with_warmup
         self.category = category
-        self.relative = relative
     
     @staticmethod
-    def make(interp, with_warmup, category="total", relative=False):
-        return CompareConfig(interp, with_warmup, category, relative)
+    def make(interp, with_warmup, category="total"):
+        return CompareConfig(interp, with_warmup, category)
 
     def __str__(self):
         return f"{self.interp} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
 
 # A config object for precisely one plot file
 class PlotConfig:
-    def __init__(self, output_file_name, sort_interp, is_single=False, benchmark_names=[], interp_configs=[], caption=""):
+    def __init__(self,
+                 output_file_name,
+                 sort_interp,
+                 relative_interp=None,
+                 is_single=False,
+                 benchmark_names=[],
+                 compare_configs=[],
+                 caption=""):
         # A single plot is we compare multiple interpreters on a single benchmark
         # Single plots are graph plots (whereas non-single ones are bar charts)
         self.is_single = is_single
@@ -226,11 +232,12 @@ class PlotConfig:
         self.caption = caption
 
         # Validate interpreters
-        for i in interp_configs:
+        for i in compare_configs:
             assert i in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
 
-        self.interp_configs = interp_configs
+        self.compare_configs = compare_configs
         self.sort_interp = sort_interp
+        self.relative_interp = relative_interp
 
     def plot_single(self, benchmark_results):
         return
@@ -691,9 +698,9 @@ class BenchmarkCollection():
     def generate_plot(self, plot_config):
         print(f"Generating comparison plot data for {plot_config.output_file_name}...")
 
-        # Collect benchmark results for given interp_configs and benchmark names
+        # Collect benchmark results for given compare_configs and benchmark names
         benchmark_results = self.collect_benchmark_results(plot_config.benchmark_names,
-                                                           plot_config.interp_config)
+                                                           plot_config.compare_configs)
 
         plot_config.plot(benchmark_results)
 

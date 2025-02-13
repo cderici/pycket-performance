@@ -99,20 +99,20 @@ def main():
     # Generate CompareConfigs for selected interpreter settings
     configs = []
     outfile_name = ""
-    relative_interp = ""
     for selected_interp in user_selected_interps:
         config = CONFIG_SELECT[selected_interp](args.category_type)
-        config.relative = selected_interp == INTERP_HUMAN_TO_INTERNAL[args.relative]
         configs.append(config)
-
         outfile_name += f"vs {config.interp}"
-        if config.relative:
-            relative_interp = config.interp
+
+
+    sort_interp = INTERP_HUMAN_TO_INTERNAL[args.sort]
+    relative_interp = INTERP_HUMAN_TO_INTERNAL[args.relative] if args.relative else None
+
+    if relative_interp and relative_interp not in user_selected_interps:
+        raise Exception(f"Selected relative interp {relative_interp} is not given as one of compare interpreters.")
 
     if relative_interp:
         outfile_name += f" relative to {relative_interp}"
-
-    sort_interp = INTERP_HUMAN_TO_INTERNAL[args.sort]
 
     outfile_name += f"{args.category_type} times"
     outfile_name = outfile_name.replace(" ", "_")
@@ -133,13 +133,13 @@ def main():
     if not b_param:
         # single (multi) plot config with benchmark_names = everything we have got in the directory
         filename = f"{outfile_name}.png"
-        plot_configs.append(PlotConfig(filename, sort_interp, False, benchmark_collection.benchmark_names, configs, args.run_label))
+        plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, benchmark_collection.benchmark_names, configs, args.run_label))
     else:
         # possibly multiple (e.g. "all") single plot configs
         benchmarks = benchmark_collection.benchmark_names if b_param == "all" else [b_param]
         for b_name in benchmarks:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            plot_configs.append(PlotConfig(filename, sort_interp, True, [b_name], configs, args.run_label))
+            plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, True, [b_name], configs, args.run_label))
 
     benchmark_collection.generate_plots(plot_configs)
 
