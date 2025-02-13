@@ -212,7 +212,7 @@ class CompareConfig():
 
 # A config object for precisely one plot file
 class PlotConfig:
-    def __init__(self, output_file_name, is_single=False, benchmark_names=[], interp_configs=[], caption=""):
+    def __init__(self, output_file_name, sort_interp, is_single=False, benchmark_names=[], interp_configs=[], caption=""):
         # A single plot is we compare multiple interpreters on a single benchmark
         # Single plots are graph plots (whereas non-single ones are bar charts)
         self.is_single = is_single
@@ -230,6 +230,7 @@ class PlotConfig:
             assert i in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
 
         self.interp_configs = interp_configs
+        self.sort_interp = sort_interp
 
     def plot_single(self, benchmark_results):
         return
