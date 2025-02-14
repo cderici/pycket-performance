@@ -324,7 +324,13 @@ class PlotConfig:
             # Plot the smooth curve
             plt.plot(x_smooth, y_smooth, label=interp, linewidth=2)
 
-        return
+        plt.grid(True)
+        # plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
+        plt.legend()
+        plt.tight_layout()
+        print(f"Saving plot to {self.output_file_name}")
+        plt.savefig(self.output_file_name)
+        plt.close()
 
     def plot_multi(self, benchmark_names, benchmark_results):
         return
