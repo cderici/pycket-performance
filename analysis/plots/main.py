@@ -97,11 +97,11 @@ def main():
             raise Exception(f"Unrecognized interpreter selected: {user_param_interp}")
 
     # Generate CompareConfigs for selected interpreter settings
-    configs = []
+    configs = set()
     outfile_name = ""
     for selected_interp in user_selected_interps:
         config = CONFIG_SELECT[selected_interp](args.category_type)
-        configs.append(config)
+        configs.add(config)
         outfile_name += f"vs {config.interp}"
 
 
@@ -130,18 +130,21 @@ def main():
 
     # Generate PlotConfig(s)
     plot_configs = []
+    benchmark_names = []
     if not b_param:
         # single (multi) plot config with benchmark_names = everything we have got in the directory
         filename = f"{outfile_name}.png"
-        plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, benchmark_collection.benchmark_names, configs, args.run_label))
+        benchmark_names.append(benchmark_collection.benchmark_names)
+        plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, configs, args.run_label))
     else:
         # possibly multiple (e.g. "all") single plot configs
         benchmarks = benchmark_collection.benchmark_names if b_param == "all" else [b_param]
         for b_name in benchmarks:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, True, [b_name], configs, args.run_label))
+            benchmark_names.append([b_name])
+            plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, True, configs, args.run_label))
 
-    benchmark_collection.generate_plots(plot_configs)
+    benchmark_collection.generate_plots(benchmark_names, plot_configs)
 
 if __name__ == "__main__":
     main()

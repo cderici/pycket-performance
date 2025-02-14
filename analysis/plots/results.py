@@ -242,18 +242,12 @@ class PlotConfig:
                  sort_interp,
                  relative_interp=None,
                  is_single=False,
-                 benchmark_names=[],
                  compare_configs={},
                  caption=""):
         # A single plot is we compare multiple interpreters on a single benchmark
         # Single plots are graph plots (whereas non-single ones are bar charts)
         self.is_single = is_single
 
-        # Check if benchmark_names contain only one benchmark if this is a single plot
-        if is_single:
-            assert len(benchmark_names) == 1, f"multiple benchmarks are given for a \"single\" plot: {benchmark_names}"
-
-        self.benchmark_names = benchmark_names
         self.output_file_name = output_file_name
         self.caption = caption
 
@@ -280,13 +274,18 @@ class PlotConfig:
 
         return
 
-    def plot_multi(self, benchmark_results):
+    def plot_multi(self, benchmark_names, benchmark_results):
         return
 
-    def plot(self, benchmark_results):
+    def plot(self, benchmark_names, benchmark_results):
         if self.is_single:
-            return self.plot_single(benchmark_results)
-        return self.plot_multi(benchmark_results)
+
+            # Check if benchmark_names contain only one benchmark if this is a single plot
+            assert len(benchmark_names) == 1, f"multiple benchmarks are given for a \"single\" plot: {benchmark_names}"
+
+            return self.plot_single(benchmark_names[0], benchmark_results)
+
+        return self.plot_multi(benchmark_names, benchmark_results)
 
 # Pre-built configuration objects
 NP_WW_Config = partial(CompareConfig.make, NP_WW, True)
@@ -787,18 +786,18 @@ class BenchmarkCollection():
 
         return b_results
 
-    def generate_plots(self, plot_configs):
+    def generate_plots(self, benchmark_names, plot_configs):
         for plot_config in plot_configs:
-            self.generate_plot(plot_config)
+            self.generate_plot(benchmark_names, plot_config)
 
-    def generate_plot(self, plot_config):
+    def generate_plot(self, benchmark_names, plot_config):
         print(f"Generating comparison plot data for {plot_config.output_file_name}...")
 
         # Collect benchmark results for given compare_configs and benchmark names
-        benchmark_results = self.collect_benchmark_results(plot_config.benchmark_names,
+        benchmark_results = self.collect_benchmark_results(benchmark_names,
                                                            plot_config.compare_configs)
 
-        plot_config.plot(benchmark_results)
+        plot_config.plot(benchmark_names, benchmark_results)
 
 
 
