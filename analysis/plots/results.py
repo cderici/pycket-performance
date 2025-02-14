@@ -127,7 +127,9 @@ class BenchmarkIngress:
 class Result:
     def __init__(self, values):
         np_arr = np.array(values)
-        self.all_values = values
+
+        self.all_values = np_arr
+        self.raw_values = values
         self.best = np.min(np_arr)
         self.mean = np.mean(np_arr)
         self.std_dev = np.std(np_arr, ddof=1)
@@ -259,11 +261,29 @@ class PlotConfig:
         self.sort_interp = sort_interp
         self.relative_interp = relative_interp
 
-    def plot_single(self, benchmark_results):
+    def plot_single(self, benchmark_name, benchmark_results):
         """
         self.benchmark_names
         self.compare_configs
+
+        Given benchmark_results are already filtered to contain only the requested
+        interpreters and benchmarks.
+
         benchmark_results
+            b_results
+                {
+                    NP_WW: {
+                                ack: Result
+                                tail: Result
+                                ...
+                            },
+                    OP_NW: {
+                                ack: Result
+                                ...
+                            },
+                    ...
+                }
+
         """
         plt.figure(figsize=(12, 8))
         # Prepare a caption using output_file
@@ -271,6 +291,38 @@ class PlotConfig:
         plt.title(f"{self.caption} : {caption}")
         plt.xlabel("Iterations")
         plt.ylabel("Runtime (ms)")
+
+        # Prepare values for computing relative values
+        # relative_interp_values: np.array
+        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values_
+
+        for interp, result_dict in benchmark_results.items():
+            if self.relative_interp:
+                # Add a horizontal line for relative interp baseline (normalized to 1)
+                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=self.relative_interp)
+                continue
+
+            # Sanity check to make sure we have the result of the correct benchmark.
+            if benchmark_name not in result_dict:
+                raise Exception(f"{benchmark_name} not in result_dict {result_dict}. See collect_benchmark_results method.")
+
+            result = result_dict[benchmark_name]
+
+            x = np.arange(result.sample_size)
+
+            y = result.all_values # Already an np.array
+            if self.relative_interp:
+                # Piecewise divide with relative interp values to compute relative values
+                y /= relative_interp_values
+
+            # Generate smooth x values for interpolation
+            x_smooth = np.linspace(x.min(), x.max(), 300)
+
+            # Create a smooth spline curve for y over x
+            y_smooth = make_interp_spline(x, y, k=3)(x_smooth)
+
+            # Plot the smooth curve
+            plt.plot(x_smooth, y_smooth, label=interp, linewidth=2)
 
         return
 
