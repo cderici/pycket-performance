@@ -332,6 +332,17 @@ class PlotConfig:
         plt.savefig(self.output_file_name)
         plt.close()
 
+    def _compute_sorted_benchmark_names(self, benchmark_results):
+        """
+            Get the benchmark names in order where the results of 
+            the self.sort_interp for those benchmarks are ascending 
+            order.
+        """
+        s_interp_results = benchmark_results[self.sort_interp] # {bname: Result}
+    
+        return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].best)]
+
+
     def plot_multi(self, benchmark_names, benchmark_results):
         """
         self.benchmark_names
@@ -376,6 +387,15 @@ class PlotConfig:
             f"{OP_NW} No Warmup": "#f77474",
             f"{R} With Warmup": "#4558e6" # FIXME: "Racket"
         }
+
+        # Multi will always be sorted based on an interp (e.g., NP_WW)
+        # Get the benchmark names that are sorted based on the 
+        # result of the interp used (e.g. OP_NW)
+        sorted_benchmark_names = self._compute_sorted_benchmark_names(benchmark_results)
+
+
+        for ....................
+            plt.bar()
 
         return
 
