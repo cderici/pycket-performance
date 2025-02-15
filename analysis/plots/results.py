@@ -451,8 +451,21 @@ class PlotConfig:
             label = interp_human(interp)
             color = colors[interp]
 
-            # plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))), y_values_for_interp, yerr=confidence_for_interp, width=width, label=label, color=color)
-            plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))), y_values_for_interp, width=width, label=label, color=color)
+            plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))),
+                    y_values_for_interp,
+                    width=width,
+                    label=label,
+                    color=color
+                    )
+
+            plt.errorbar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))),
+                         y_values_for_interp,
+                         yerr=confidence_for_interp,
+                         fmt='none',
+                         ecolor='black',
+                         capsize=4,
+                         elinewidth=1
+                         )
 
         plt.xticks(x + width, sorted_benchmark_names, rotation=45, ha="right")
         self._plot_postamble()
