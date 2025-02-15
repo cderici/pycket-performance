@@ -113,7 +113,7 @@ def main():
     for selected_interp in user_selected_interps:
         config = CONFIG_SELECT[selected_interp](args.category_type)
         configs.add(config)
-        outfile_name += f"vs {config.interp}"
+        outfile_name += f"vs {config.interp} "
 
     sort_interp = None
     if not b_param: # multi-plot
@@ -129,7 +129,7 @@ def main():
         raise Exception(f"Selected relative interp {relative_interp} is not given as one of compare interpreters.")
 
     if relative_interp:
-        outfile_name += f" relative to {relative_interp}"
+        outfile_name += f"relative to {relative_interp} "
 
     outfile_name += f"{args.category_type} times"
     outfile_name = outfile_name.replace(" ", "_")

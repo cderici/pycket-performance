@@ -12,11 +12,23 @@ from functools import partial
 plt.style.use('fivethirtyeight')
 
 # Interpreter Identifiers
-NP_WW = "New Pycket With Warmup"
-NP_NW = "New Pycket No Warmup"
-OP_WW = "Old Pycket With Warmup"
-OP_NW = "Old Pycket No Warmup"
-R     = "Racket"
+NP_WW = "NPWW"
+NP_NW = "NPNW"
+OP_WW = "OPWW"
+OP_NW = "OPNW"
+R     = "R"
+
+def interp_human(interp):
+    if interp == NP_WW:
+        return "New Pycket With Warmup"
+    elif interp == NP_NW:
+        return "New Pycket No Warmup"
+    elif interp == OP_WW:
+        return "Old Pycket With Warmup"
+    elif interp == OP_NW:
+        return "Old Pycket No Warmup"
+    elif interp == R:
+        return "Racket"
 
 VALID_INTERPRETERS = [NP_WW, NP_NW, OP_WW, OP_NW, R]
 
@@ -136,6 +148,9 @@ class Result:
         self.sample_size = len(np_arr)
         t_score = stats.t.ppf(0.975, df=self.sample_size-1) # 95% confidence interval
         self.ci_half_range = t_score * (self.std_dev / np.sqrt(self.sample_size))
+
+        # What to use when we need a single value to represent the whole sample
+        self.representative = self.best
 
 class BenchmarkResult:
     """Keeps a record of the results of a benchmark run for each category (CPU, GC, Total).
@@ -340,7 +355,7 @@ class PlotConfig:
         """
         s_interp_results = benchmark_results[self.sort_interp] # {bname: Result}
     
-        return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].best)]
+        return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].representative)]
 
 
     def _plot_preamble(self):
@@ -384,11 +399,11 @@ class PlotConfig:
         self._plot_preamble()
 
         colors = {
-            f"{NP_WW} With Warmup": "#0c590c",
-            f"{NP_NW} No Warmup": "#5ae8b8",
-            f"{OP_WW} With Warmup": "#941616",
-            f"{OP_NW} No Warmup": "#f77474",
-            f"{R} With Warmup": "#4558e6"
+            NP_WW: "#0c590c",
+            NP_NW: "#5ae8b8",
+            OP_WW: "#941616",
+            OP_NW: "#f77474",
+            R: "#4558e6"
         }
 
         # Multi will always be sorted based on an interp (e.g., NP_WW)
@@ -400,11 +415,20 @@ class PlotConfig:
         width = 0.15
         group_gap = 0.2
 
+        # Prepare values for computing relative values
+        # relative_interp_values: np.array
+        relative_interp_values = []
+        if self.relative_interp:
+            relative_interp_results = benchmark_results[self.relative_interp]
+            for b in sorted_benchmark_names:
+                relative_interp_values.append(relative_interp_results[b].representative)
+            relative_interp_values = np.array(relative_interp_values)
+
         for i, (interp, results) in enumerate(benchmark_results.items()):
-            if self.relative_interp:
+            if self.relative_interp and interp == self.relative_interp:
                 # For relative interp itself, just plot a horizontal line
                 # and skip
-                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=self.relative_interp)
+                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=interp_human(self.relative_interp))
                 continue
 
             # Get the results of interp for sorted benchmark_results
@@ -412,24 +436,20 @@ class PlotConfig:
             for benchmark_name in sorted_benchmark_names:
                 results_for_interp.append(results[benchmark_name])
 
-            y_values_for_interp = [r.mean for r in results_for_interp]
+            y_values_for_interp = np.array([r.representative for r in results_for_interp])
             confidence_for_interp = [r.ci_half_range for r in results_for_interp]
 
             if self.relative_interp:
-                # Prepare values for computing relative values
-                # relative_interp_values: np.array
-                relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
-
                 # Piecewise divide with relative interp values to compute relative values
                 y_values_for_interp /= relative_interp_values
 
-            label = interp
-            color = colors[label]
+            label = interp_human(interp)
+            color = colors[interp]
 
-            plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))),
-                    y_values_for_interp, yerr=confidence_for_interp, width=width, label=label, color=color)
+            # plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))), y_values_for_interp, yerr=confidence_for_interp, width=width, label=label, color=color)
+            plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))), y_values_for_interp, width=width, label=label, color=color)
 
-        plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
+        plt.xticks(x + width, sorted_benchmark_names, rotation=45, ha="right")
         self._plot_postamble()
 
     def plot(self, benchmark_names, benchmark_results):
