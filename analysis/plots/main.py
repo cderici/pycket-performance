@@ -101,9 +101,15 @@ def main():
         if user_param_interp == RACKET:
             user_selected_interps.append(R)
         elif user_param_interp == NEW_PYCKET:
-            user_selected_interps.append(NP_WW if args.with_warmup else NP_NW)
+            if args.with_warmup:
+                user_selected_interps.append(NP_WW)
+            if args.no_warmup:
+                user_selected_interps.append(NP_NW)
         elif user_param_interp == OLD_PYCKET:
-            user_selected_interps.append(OP_WW if args.with_warmup else OP_NW)
+            if args.with_warmup:
+                user_selected_interps.append(OP_WW)
+            if args.no_warmup:
+                user_selected_interps.append(OP_NW)
         else:
             raise Exception(f"Unrecognized interpreter selected: {user_param_interp}")
 
@@ -155,10 +161,9 @@ def main():
         plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, configs, args.run_label))
     else:
         # possibly multiple (e.g. "all") single plot configs
-        benchmarks = benchmark_collection.benchmark_names if b_param == "all" else [b_param]
-        for b_name in benchmarks:
+        benchmark_names = list(benchmark_collection.benchmark_names) if b_param == "all" else [b_param]
+        for b_name in benchmark_names:
             filename = f"singles/{outfile_name}_{b_name}.png"
-            benchmark_names.append([b_name])
             plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, True, configs, args.run_label))
 
     benchmark_collection.generate_plots(benchmark_names, plot_configs)

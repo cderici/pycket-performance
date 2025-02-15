@@ -322,7 +322,7 @@ class PlotConfig:
         for interp, result_dict in benchmark_results.items():
             if self.relative_interp:
                 # Add a horizontal line for relative interp baseline (normalized to 1)
-                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=self.relative_interp)
+                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=interp_human(self.relative_interp))
                 continue
 
             # Sanity check to make sure we have the result of the correct benchmark.
@@ -342,7 +342,7 @@ class PlotConfig:
             y_smooth = make_interp_spline(x, y, k=3)(x_smooth)
 
             # Plot the smooth curve
-            plt.plot(x_smooth, y_smooth, label=interp, linewidth=2)
+            plt.plot(x_smooth, y_smooth, label=interp_human(interp), linewidth=2)
 
         plt.grid(True)
         self._plot_postamble()
@@ -965,8 +965,11 @@ class BenchmarkCollection():
         return b_results
 
     def generate_plots(self, benchmark_names, plot_configs):
-        for plot_config in plot_configs:
-            self.generate_plot(benchmark_names, plot_config)
+        # FIXME: This is hacky. Each plot_config represents one plot (one file), and
+        # it should know which benchmarks it contains. This way, we won't decouple it
+        # in main, and re-couple it here.
+        for i, plot_config in enumerate(plot_configs):
+            self.generate_plot([benchmark_names[i]], plot_config)
 
     def generate_plot(self, benchmark_names, plot_config):
         print(f"Generating comparison plot data for {plot_config.output_file_name}...")
