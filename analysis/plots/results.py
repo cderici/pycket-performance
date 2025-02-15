@@ -294,7 +294,7 @@ class PlotConfig:
 
         # Prepare values for computing relative values
         # relative_interp_values: np.array
-        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values_
+        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
 
         for interp, result_dict in benchmark_results.items():
             if self.relative_interp:
@@ -333,6 +333,50 @@ class PlotConfig:
         plt.close()
 
     def plot_multi(self, benchmark_names, benchmark_results):
+        """
+        self.benchmark_names
+        self.compare_configs
+
+        Given benchmark_results are already filtered to contain only the requested
+        interpreters and benchmarks.
+
+        benchmark_results
+            b_results
+                {
+                    NP_WW: {
+                                ack: Result
+                                tail: Result
+                                ...
+                            },
+                    OP_NW: {
+                                ack: Result
+                                ...
+                            },
+                    ...
+                }
+
+        """
+        plt.figure(figsize=(12, 8))
+        # Prepare a caption using output_file
+        caption = Path(self.output_file_name.replace("_", " ")).stem
+        plt.title(f"{self.caption} : {caption}")
+        plt.ylabel("Runtime (ms)")
+
+        # Prepare values for computing relative values
+        # relative_interp_values: np.array
+        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
+        x = np.arange(len(benchmark_names))
+        width = 0.15
+        group_gap = 0.2
+
+        colors = {
+            f"{NP_WW} With Warmup": "#0c590c",
+            f"{NP_NW} No Warmup": "#5ae8b8",
+            f"{OP_WW} With Warmup": "#941616",
+            f"{OP_NW} No Warmup": "#f77474",
+            f"{R} With Warmup": "#4558e6" # FIXME: "Racket"
+        }
+
         return
 
     def plot(self, benchmark_names, benchmark_results):
