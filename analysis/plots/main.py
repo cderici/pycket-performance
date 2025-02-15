@@ -100,9 +100,9 @@ def main():
     for user_param_interp in args.interpreters:
         if user_param_interp == RACKET:
             user_selected_interps.append(R)
-        elif user_selected_interps == NEW_PYCKET:
+        elif user_param_interp == NEW_PYCKET:
             user_selected_interps.append(NP_WW if args.with_warmup else NP_NW)
-        elif user_selected_interps == OLD_PYCKET:
+        elif user_param_interp == OLD_PYCKET:
             user_selected_interps.append(OP_WW if args.with_warmup else OP_NW)
         else:
             raise Exception(f"Unrecognized interpreter selected: {user_param_interp}")
@@ -149,9 +149,9 @@ def main():
     plot_configs = []
     benchmark_names = []
     if not b_param:
-        # single (multi) plot config with benchmark_names = everything we have got in the directory
+        # single (multi) plot config with benchmark_names = everything we collected from the given directory
         filename = f"{outfile_name}.png"
-        benchmark_names.append(benchmark_collection.benchmark_names)
+        benchmark_names = list(benchmark_collection.benchmark_names)
         plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, configs, args.run_label))
     else:
         # possibly multiple (e.g. "all") single plot configs

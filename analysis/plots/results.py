@@ -235,13 +235,28 @@ class CompareConfig():
         return CompareConfig(interp, with_warmup, category)
 
     def __str__(self):
-        return f"{self.interp} {"With Warmup" if self.with_warmup else "No Warmup"} {self.category} time"
+        return f"{self.interp} {self.category} time"
+
+# Pre-built configuration objects
+NP_WW_Config = partial(CompareConfig.make, NP_WW, True)
+NP_NW_Config = partial(CompareConfig.make, NP_NW, False)
+OP_WW_Config = partial(CompareConfig.make, OP_WW, True)
+OP_NW_Config = partial(CompareConfig.make, OP_NW, False)
+R_Config     = partial(CompareConfig.make, R, True)
+
+CONFIG_SELECT = {
+    NP_WW: NP_WW_Config,
+    NP_NW: NP_NW_Config,
+    OP_WW: OP_WW_Config,
+    OP_NW: OP_NW_Config,
+    R: R_Config,
+}
 
 # A config object for precisely one plot file
 class PlotConfig:
     def __init__(self,
                  output_file_name,
-                 sort_interp,
+                 sort_interp=None,
                  relative_interp=None,
                  is_single=False,
                  compare_configs={},
@@ -255,7 +270,7 @@ class PlotConfig:
 
         # Validate interpreters
         for i in compare_configs:
-            assert i in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
+            assert i.interp in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
 
         self.compare_configs = compare_configs
         self.sort_interp = sort_interp
@@ -385,7 +400,7 @@ class PlotConfig:
         width = 0.15
         group_gap = 0.2
 
-        for i, (interp, results) in enumerate(benchmark_results):
+        for i, (interp, results) in enumerate(benchmark_results.items()):
             if self.relative_interp:
                 # For relative interp itself, just plot a horizontal line
                 # and skip
@@ -427,21 +442,6 @@ class PlotConfig:
 
         return self.plot_multi(benchmark_names, benchmark_results)
 
-# Pre-built configuration objects
-NP_WW_Config = partial(CompareConfig.make, NP_WW, True)
-NP_NW_Config = partial(CompareConfig.make, NP_NW, False)
-OP_WW_Config = partial(CompareConfig.make, OP_WW, True)
-OP_NW_Config = partial(CompareConfig.make, OP_NW, False)
-R_Config     = partial(CompareConfig.make, R, True)
-
-CONFIG_SELECT = {
-    NP_WW: NP_WW_Config,
-    NP_NW: NP_NW_Config,
-    OP_WW: OP_WW_Config,
-    OP_NW: OP_NW_Config,
-    R: R_Config,
-}
-
 class BenchmarkCollection():
     """Keeps a collection of BenchmarkResult objects, and knows how to sort, process, and analyse them.
     """
@@ -474,7 +474,7 @@ class BenchmarkCollection():
         else:
             self.benchmark_results_dict[b_result.interp] = {b_result.benchmark_name: b_result}
 
-        self.benchmark_names.add(b_result.name)
+        self.benchmark_names.add(b_result.benchmark_name)
 
     # TODO: remove
     def _get_b_label(self, interpreter, benchmark_name, with_warmup):
@@ -911,7 +911,7 @@ class BenchmarkCollection():
         b_results = {}
         for compare_config in compare_configs:
 
-            if compare_config.interp not in self.benchmark_names:
+            if compare_config.interp not in self.benchmark_results_dict:
                 raise Exception(f"Results for {compare_config.interp} not found in the result collection")
 
             # Initialize b_results
