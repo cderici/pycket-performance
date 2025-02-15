@@ -285,16 +285,9 @@ class PlotConfig:
                 }
 
         """
-        plt.figure(figsize=(12, 8))
-        # Prepare a caption using output_file
-        caption = Path(self.output_file_name.replace("_", " ")).stem
-        plt.title(f"{self.caption} : {caption}")
-        plt.xlabel("Iterations")
-        plt.ylabel("Runtime (ms)")
+        self._plot_preamble()
 
-        # Prepare values for computing relative values
-        # relative_interp_values: np.array
-        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
+        plt.xlabel("Iterations")
 
         for interp, result_dict in benchmark_results.items():
             if self.relative_interp:
@@ -311,9 +304,6 @@ class PlotConfig:
             x = np.arange(result.sample_size)
 
             y = result.all_values # Already an np.array
-            if self.relative_interp:
-                # Piecewise divide with relative interp values to compute relative values
-                y /= relative_interp_values
 
             # Generate smooth x values for interpolation
             x_smooth = np.linspace(x.min(), x.max(), 300)
@@ -325,12 +315,7 @@ class PlotConfig:
             plt.plot(x_smooth, y_smooth, label=interp, linewidth=2)
 
         plt.grid(True)
-        # plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
-        plt.legend()
-        plt.tight_layout()
-        print(f"Saving plot to {self.output_file_name}")
-        plt.savefig(self.output_file_name)
-        plt.close()
+        self._plot_postamble()
 
     def _compute_sorted_benchmark_names(self, benchmark_results):
         """
@@ -342,6 +327,20 @@ class PlotConfig:
     
         return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].best)]
 
+
+    def _plot_preamble(self):
+        plt.figure(figsize=(12, 8))
+        # Prepare a caption using output_file
+        caption = Path(self.output_file_name.replace("_", " ")).stem
+        plt.title(f"{self.caption} : {caption}")
+        plt.ylabel("Runtime (ms)")
+
+    def _plot_postamble(self):
+        plt.legend()
+        plt.tight_layout()
+        print(f"Saving plot to {self.output_file_name}")
+        plt.savefig(self.output_file_name)
+        plt.close()
 
     def plot_multi(self, benchmark_names, benchmark_results):
         """
@@ -367,25 +366,14 @@ class PlotConfig:
                 }
 
         """
-        plt.figure(figsize=(12, 8))
-        # Prepare a caption using output_file
-        caption = Path(self.output_file_name.replace("_", " ")).stem
-        plt.title(f"{self.caption} : {caption}")
-        plt.ylabel("Runtime (ms)")
-
-        # Prepare values for computing relative values
-        # relative_interp_values: np.array
-        relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
-        x = np.arange(len(benchmark_names))
-        width = 0.15
-        group_gap = 0.2
+        self._plot_preamble()
 
         colors = {
             f"{NP_WW} With Warmup": "#0c590c",
             f"{NP_NW} No Warmup": "#5ae8b8",
             f"{OP_WW} With Warmup": "#941616",
             f"{OP_NW} No Warmup": "#f77474",
-            f"{R} With Warmup": "#4558e6" # FIXME: "Racket"
+            f"{R} With Warmup": "#4558e6"
         }
 
         # Multi will always be sorted based on an interp (e.g., NP_WW)
@@ -393,11 +381,41 @@ class PlotConfig:
         # result of the interp used (e.g. OP_NW)
         sorted_benchmark_names = self._compute_sorted_benchmark_names(benchmark_results)
 
+        x = np.arange(len(sorted_benchmark_names))
+        width = 0.15
+        group_gap = 0.2
 
-        for ....................
-            plt.bar()
+        for i, (interp, results) in enumerate(benchmark_results):
+            if self.relative_interp:
+                # For relative interp itself, just plot a horizontal line
+                # and skip
+                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=self.relative_interp)
+                continue
 
-        return
+            # Get the results of interp for sorted benchmark_results
+            results_for_interp = []
+            for benchmark_name in sorted_benchmark_names:
+                results_for_interp.append(results[benchmark_name])
+
+            y_values_for_interp = [r.mean for r in results_for_interp]
+            confidence_for_interp = [r.ci_half_range for r in results_for_interp]
+
+            if self.relative_interp:
+                # Prepare values for computing relative values
+                # relative_interp_values: np.array
+                relative_interp_values = benchmark_results[self.relative_interp][benchmark_name].all_values
+
+                # Piecewise divide with relative interp values to compute relative values
+                y_values_for_interp /= relative_interp_values
+
+            label = interp
+            color = colors[label]
+
+            plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))),
+                    y_values_for_interp, yerr=confidence_for_interp, width=width, label=label, color=color)
+
+        plt.xticks(x + width, benchmark_names, rotation=45, ha="right")
+        self._plot_postamble()
 
     def plot(self, benchmark_names, benchmark_results):
         if self.is_single:
