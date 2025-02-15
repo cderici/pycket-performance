@@ -38,6 +38,8 @@ file name formats (ignores other files).
 It extracts the runtime for each benchmark and processes the durations (at the time of writing this, only takes the average), and plots the results using mathplotlib.
 """
 
+UNSPECIFIED = "unspecified"
+
 INTERP_HUMAN_TO_INTERNAL = {
     "new-with-warmup"   : NP_WW,
     "new-no-warmup"     : NP_NW,
@@ -45,6 +47,15 @@ INTERP_HUMAN_TO_INTERNAL = {
     "old-no-warmup"     : OP_NW,
     "racket"            : R,
 }
+
+def _pick_sort_interp(user_selected_interps):
+    priority = [NP_WW, NP_NW, OP_WW, OP_NW, R]
+
+    for i in priority:
+        if i in user_selected_interps:
+            return i
+
+    raise Exception(f"Unable to pick a sort interp out of {user_selected_interps}")
 
 def main():
     parser = argparse.ArgumentParser(description="Process benchmark results and generate plots.")
@@ -68,7 +79,7 @@ def main():
 
     parser.add_argument("--relative", choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
 
-    parser.add_argument("--sort", default="new-with-warmup", choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
+    parser.add_argument("--sort", default=UNSPECIFIED, choices=["new-with-warmup", "new-no-warmup", "old-with-warmup", "old-no-warmup", "racket"], help="Set the relative baseline interpreter.")
 
     parser.add_argument("--single", dest="single_benchmark_name", default=None, type=str, help="Plot only a single benchmark with all interpreters and configs to inspect warmup effects. Use \"all\" for producing plots for all benchmarks.")
 
@@ -104,8 +115,14 @@ def main():
         configs.add(config)
         outfile_name += f"vs {config.interp}"
 
+    sort_interp = None
+    if not b_param: # multi-plot
+        # We'll pick a sort interp if nothing is specified
+        if args.sort == UNSPECIFIED:
+            sort_interp = _pick_sort_interp(user_selected_interps)
+        else:
+            sort_interp = INTERP_HUMAN_TO_INTERNAL[args.sort]
 
-    sort_interp = INTERP_HUMAN_TO_INTERNAL[args.sort]
     relative_interp = INTERP_HUMAN_TO_INTERNAL[args.relative] if args.relative else None
 
     if relative_interp and relative_interp not in user_selected_interps:
