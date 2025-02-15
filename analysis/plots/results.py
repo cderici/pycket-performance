@@ -349,12 +349,17 @@ class PlotConfig:
 
     def _compute_sorted_benchmark_names(self, benchmark_results):
         """
-            Get the benchmark names in order where the results of 
-            the self.sort_interp for those benchmarks are ascending 
+            Get the benchmark names in order where the results of
+            the self.sort_interp for those benchmarks are ascending
             order.
+
+            If we have a relative interp, then we need to consider the
+            divided values instead of absolute values when ordering.
         """
         s_interp_results = benchmark_results[self.sort_interp] # {bname: Result}
-    
+        if self.relative_interp:
+            relative_interp_results = benchmark_results[self.relative_interp]
+            return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].representative / relative_interp_results[x[0]].representative)]
         return [bname for bname, _ in sorted(s_interp_results.items(), key=lambda x: x[1].representative)]
 
 
