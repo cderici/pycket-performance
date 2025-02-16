@@ -275,6 +275,7 @@ class PlotConfig:
                  relative_interp=None,
                  is_single=False,
                  compare_configs={},
+                 benchmark_names=[],
                  caption=""):
         # A single plot is we compare multiple interpreters on a single benchmark
         # Single plots are graph plots (whereas non-single ones are bar charts)
@@ -287,11 +288,16 @@ class PlotConfig:
         for i in compare_configs:
             assert i.interp in VALID_INTERPRETERS, f"{i} is not a valid. Valid interpreters are : {VALID_INTERPRETERS}"
 
+        if is_single:
+            # Check if benchmark_names contain only one benchmark if this is a single plot
+            assert len(benchmark_names) == 1, f"multiple benchmarks are given for a \"single\" plot: {benchmark_names}"
+
+        self.benchmark_names = benchmark_names
         self.compare_configs = compare_configs
         self.sort_interp = sort_interp
         self.relative_interp = relative_interp
 
-    def plot_single(self, benchmark_name, benchmark_results):
+    def plot_single(self, benchmark_results):
         """
         self.benchmark_names
         self.compare_configs
@@ -315,6 +321,8 @@ class PlotConfig:
                 }
 
         """
+        benchmark_name = self.benchmark_names[0]
+
         self._plot_preamble()
 
         plt.xlabel("Iterations")
@@ -377,7 +385,7 @@ class PlotConfig:
         plt.savefig(self.output_file_name)
         plt.close()
 
-    def plot_multi(self, benchmark_names, benchmark_results):
+    def plot_multi(self, benchmark_results):
         """
         self.benchmark_names
         self.compare_configs
@@ -470,15 +478,12 @@ class PlotConfig:
         plt.xticks(x + width, sorted_benchmark_names, rotation=45, ha="right")
         self._plot_postamble()
 
-    def plot(self, benchmark_names, benchmark_results):
+    def plot(self, benchmark_results):
         if self.is_single:
 
-            # Check if benchmark_names contain only one benchmark if this is a single plot
-            assert len(benchmark_names) == 1, f"multiple benchmarks are given for a \"single\" plot: {benchmark_names}"
+            return self.plot_single(benchmark_results)
 
-            return self.plot_single(benchmark_names[0], benchmark_results)
-
-        return self.plot_multi(benchmark_names, benchmark_results)
+        return self.plot_multi(benchmark_results)
 
 class BenchmarkCollection():
     """Keeps a collection of BenchmarkResult objects, and knows how to sort, process, and analyse them.
@@ -964,21 +969,18 @@ class BenchmarkCollection():
 
         return b_results
 
-    def generate_plots(self, benchmark_names, plot_configs):
-        # FIXME: This is hacky. Each plot_config represents one plot (one file), and
-        # it should know which benchmarks it contains. This way, we won't decouple it
-        # in main, and re-couple it here.
-        for i, plot_config in enumerate(plot_configs):
-            self.generate_plot([benchmark_names[i]], plot_config)
+    def generate_plots(self, plot_configs):
+        for plot_config in plot_configs:
+            self.generate_plot(plot_config)
 
-    def generate_plot(self, benchmark_names, plot_config):
+    def generate_plot(self, plot_config):
         print(f"Generating comparison plot data for {plot_config.output_file_name}...")
 
         # Collect benchmark results for given compare_configs and benchmark names
-        benchmark_results = self.collect_benchmark_results(benchmark_names,
+        benchmark_results = self.collect_benchmark_results(plot_config.benchmark_names,
                                                            plot_config.compare_configs)
 
-        plot_config.plot(benchmark_names, benchmark_results)
+        plot_config.plot(benchmark_results)
 
 
 
