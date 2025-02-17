@@ -392,12 +392,13 @@ class PlotConfig:
 
         # Prepare values for computing relative values
         # relative_interp_values: np.array
-        relative_interp_values = []
+        relative_interp_values = np.empty(len(sorted_benchmark_names), dtype=float)
+        confidence_for_relative = np.empty(len(sorted_benchmark_names), dtype=float)
         if self.relative_interp:
             relative_interp_results = benchmark_results[self.relative_interp]
-            for b in sorted_benchmark_names:
-                relative_interp_values.append(relative_interp_results[b].representative)
-            relative_interp_values = np.array(relative_interp_values)
+            for i, b in enumerate(sorted_benchmark_names):
+                relative_interp_values[i] = relative_interp_results[b].representative
+                confidence_for_relative[i] = relative_interp_results[b].ci_half_range
 
         for i, (interp, results) in enumerate(benchmark_results.items()):
             if self.relative_interp and interp == self.relative_interp:
@@ -412,11 +413,17 @@ class PlotConfig:
                 results_for_interp.append(results[benchmark_name])
 
             y_values_for_interp = np.array([r.representative for r in results_for_interp])
-            confidence_for_interp = [r.ci_half_range for r in results_for_interp]
+            confidence_for_interp = np.array([r.ci_half_range for r in results_for_interp])
 
             if self.relative_interp:
-                # Piecewise divide with relative interp values to compute relative values
-                y_values_for_interp /= relative_interp_values
+                relative_runtimes = y_values_for_interp / relative_interp_values
+
+                # Compute the relative error confidence intervals
+                confidence_for_interp = relative_runtimes * np.sqrt(np.square(confidence_for_interp / y_values_for_interp) + np.square(confidence_for_relative / relative_interp_values))
+
+                y_values_for_interp = relative_runtimes
+
+
 
             label = interp_human(interp)
             color = colors[interp]
