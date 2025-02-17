@@ -12,13 +12,17 @@ all-non-relative: new-vs-old # new-vs-old-vs-racket # new-vs-racket
 new-vs-old:
 	$(PYTHON) main.py $(DIR) --new --old --with-warmup --label $(LABEL)
 
-# .PHONY: new-vs-racket
-# new-vs-racket:
-# 	$(PYTHON) main.py $(DIR) --new --racket --with-warmup
+.PHONY: alltogether
+alltogether:
+	$(PYTHON) main.py $(DIR) --new --old --racket --with-warmup --no-warmup --label $(LABEL) --sort new-no-warmup
 
-# .PHONY: new-vs-old-vs-racket
-# new-vs-old-vs-racket:
-# 	$(PYTHON) main.py $(DIR) --new --old --racket --with-warmup
+.PHONY: NPWW-vs-NPNW
+NPWW-vs-NPNW:
+	$(PYTHON) main.py $(DIR) --new --with-warmup --no-warmup --label $(LABEL) --sort new-no-warmup
+
+.PHONY: NPNW-vs-OPNW
+NPNW-vs-OPNW:
+	$(PYTHON) main.py $(DIR) --new --old --no-warmup --label $(LABEL) --sort new-no-warmup
 
 # Relative
 .PHONY: all-relative
@@ -27,6 +31,10 @@ all-relative: new-vs-racket-relative-racket new-vs-old-relative-racket old-vs-ra
 .PHONY: new-vs-racket-relative-racket
 new-vs-racket-relative-racket:
 	$(PYTHON) main.py $(DIR) --new --racket --with-warmup --relative racket --label $(LABEL)
+
+.PHONY: NPWW-vs-NPNW-relative-racket
+NPWW-vs-NPNW-relative-racket:
+	$(PYTHON) main.py $(DIR) --new --racket --with-warmup --no-warmup --relative racket --label $(LABEL) --sort new-no-warmup
 
 .PHONY: new-vs-old-relative-racket
 new-vs-old-relative-racket:
