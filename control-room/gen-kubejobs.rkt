@@ -132,12 +132,11 @@ BINARY_DIR=$PYCKET_DIR
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$BENCH_DIR/timings-~a
+OUTPUT_DIR=$BENCH_DIR/timings
 BINARY_DIR=~a
 
 " base-pre
   (warmup-human-repr with-warmup?)
-  (pycket/racket-human-repr is-pycket?)
   (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
 (define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed run-label)
