@@ -271,7 +271,6 @@ done
                   (warmup-repr (kubejob-config-with-warmup? config))
                   bench-name)
                 extension)))))
-
 (define job-template
 "apiVersion: batch/v1
 kind: Job
@@ -279,25 +278,38 @@ metadata:
   name: ~a
 spec:
   template:
+    metadata:
+      labels:
+        app: benchmark
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - benchmark
+              topologyKey: \"kubernetes.io/hostname\"
       containers:
-      - name: ~a
-        image: ~a
-        command: [\"/bin/sh\", \"-c\"]
-        args: [\"/mnt/nfs_share/benchmarks/scripts/~a\"]
-        env:
-          - name: POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-        volumeMounts:
-        - name: nfs-volume
-          mountPath: /mnt/nfs_share
+        - name: ~a
+          image: ~a
+          command: [\"/bin/sh\", \"-c\"]
+          args: [\"/mnt/nfs_share/benchmarks/scripts/~a\"]
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: nfs-volume
+              mountPath: /mnt/nfs_share
       restartPolicy: Never
       volumes:
-      - name: nfs-volume
-        persistentVolumeClaim:
-          claimName: nfs-pvc"
+        - name: nfs-volume
+          persistentVolumeClaim:
+            claimName: nfs-pvc"
 )
 
 (define (gen-job config)
