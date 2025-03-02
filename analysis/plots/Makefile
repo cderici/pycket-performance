@@ -59,7 +59,7 @@ new-vs-old-vs-racket-no-warmup:
 
 .PHONY: clean
 clean:
-	rm -rf *.png
+	rm -rf *.png singles
 
 .PHONY: all-singles
 all-singles:
