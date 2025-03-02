@@ -112,7 +112,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; all inputs are bool
-(define (preamble is-pycket? with-warmup? generate-traces?)
+(define (preamble is-pycket? with-warmup? generate-traces? label)
   (when (and generate-traces? (not is-pycket?))
     (error 'preamble "something is wrong, racket and generate-traces? can't be both true"))
   (let ([base-pre "#!/bin/bash
@@ -132,11 +132,14 @@ BINARY_DIR=$PYCKET_DIR
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$BENCH_DIR/timings
+OUTPUT_DIR=$BENCH_DIR/timings/~a
+# make sure the output dir exists
+mkdir -p $OUTPUT_DIR
 BINARY_DIR=~a
 
 " base-pre
   (warmup-human-repr with-warmup?)
+  label
   (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
 (define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed run-label)
@@ -246,7 +249,7 @@ done
       (let-values ([(file-name extension) (generate-file-path config)])
         (values (string-append "scripts/" file-name "." extension)
                 (format "~a~a~a~a"
-                  (preamble is-pycket? with-warmup? generate-traces?)
+                  (preamble is-pycket? with-warmup? generate-traces? run-label)
                   (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED" run-label)
                   (launch-function bench-name is-new? with-warmup? generate-traces?)
                   (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "COMPLETED" run-label)))))))
