@@ -140,6 +140,7 @@ def main():
     outfile_name += f"{args.category_type} times"
     outfile_name = outfile_name.replace(" ", "_")
     outfile_name = outfile_name[3:]
+    outfile_name = f"{args.run_label}_{outfile_name}"
 
     if b_param:
         # Check the singles dir, and create if it doesn't exist
