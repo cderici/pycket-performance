@@ -312,7 +312,7 @@ class PlotConfig:
             y_smooth = make_interp_spline(x, y, k=3)(x_smooth)
 
             # Plot the smooth curve
-            plt.plot(x_smooth, y_smooth, label=interp_human(interp), linewidth=2)
+            plt.plot(x_smooth, y_smooth, color=self._interp_color(interp), label=interp_human(interp), linewidth=2)
 
         plt.grid(True)
         self._plot_postamble()
@@ -337,7 +337,7 @@ class PlotConfig:
         plt.figure(figsize=(12, 8))
         # Prepare a caption using output_file
         caption = Path(self.output_file_name.replace("_", " ")).stem
-        plt.title(f"{self.caption} : {caption}")
+        plt.title(f"{caption}")
         plt.ylabel("Runtime (ms)")
 
     def _plot_postamble(self):
@@ -346,6 +346,18 @@ class PlotConfig:
         print(f"Saving plot to {self.output_file_name}")
         plt.savefig(self.output_file_name)
         plt.close()
+
+    def _interp_color(self, interp):
+
+        colors = {
+            NP_WW: "#0c590c",
+            NP_NW: "#5ae8b8",
+            OP_WW: "#941616",
+            OP_NW: "#f77474",
+            R: "#4558e6"
+        }
+
+        return colors[interp]
 
     def plot_multi(self, benchmark_results):
         """
@@ -372,14 +384,6 @@ class PlotConfig:
 
         """
         self._plot_preamble()
-
-        colors = {
-            NP_WW: "#0c590c",
-            NP_NW: "#5ae8b8",
-            OP_WW: "#941616",
-            OP_NW: "#f77474",
-            R: "#4558e6"
-        }
 
         # Multi will always be sorted based on an interp (e.g., NP_WW)
         # Get the benchmark names that are sorted based on the 
@@ -426,7 +430,7 @@ class PlotConfig:
 
 
             label = interp_human(interp)
-            color = colors[interp]
+            color = self._interp_color(interp)
 
             plt.bar(x + (i * (width + (group_gap * (i // len(sorted_benchmark_names))))),
                     y_values_for_interp,
