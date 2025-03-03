@@ -403,14 +403,13 @@ class PlotConfig:
             for i, b in enumerate(sorted_benchmark_names):
                 relative_interp_values[i] = relative_interp_results[b].representative
                 confidence_for_relative[i] = relative_interp_results[b].ci_half_range
+            # For relative interp itself, just plot a horizontal line
+            # and skip
+            plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=interp_human(self.relative_interp))
+            # Plot the results of the rest
+            del benchmark_results[self.relative_interp]
 
         for i, (interp, results) in enumerate(benchmark_results.items()):
-            if self.relative_interp and interp == self.relative_interp:
-                # For relative interp itself, just plot a horizontal line
-                # and skip
-                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=interp_human(self.relative_interp))
-                continue
-
             # Get the results of interp for sorted benchmark_results
             results_for_interp = []
             for benchmark_name in sorted_benchmark_names:
@@ -426,8 +425,6 @@ class PlotConfig:
                 confidence_for_interp = relative_runtimes * np.sqrt(np.square(confidence_for_interp / y_values_for_interp) + np.square(confidence_for_relative / relative_interp_values))
 
                 y_values_for_interp = relative_runtimes
-
-
 
             label = interp_human(interp)
             color = self._interp_color(interp)
