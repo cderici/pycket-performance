@@ -1,8 +1,8 @@
 #lang racket
 
-(provide benchmarks)
+(provide ALL-BENCHMARKS)
 
-(define benchmarks (list
+(define ALL-BENCHMARKS (list
                       'ack
 		      'array1
                       'cpstak
@@ -125,10 +125,12 @@ BENCH_DIR=$NFS_SHARE/benchmarks"])
       (format "~a
 TRACES_DIR=$BENCH_DIR/traces
 SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$BENCH_DIR/timings-traces
+OUTPUT_DIR=$BENCH_DIR/timings-traces/~a
+# make sure the output dir exists
+mkdir -p $OUTPUT_DIR
 BINARY_DIR=$PYCKET_DIR
 
-" base-pre (warmup-human-repr with-warmup?))
+" base-pre (warmup-human-repr with-warmup?) label)
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
@@ -154,6 +156,7 @@ BINARY_DIR=~a
                 run-label (new/old-repr is-new?) pycket/racket
                 warmup/traces bench-name
                 started/completed))))
+
 
 (define (racket-script bench-name _1 _2 _3)
   (let ([racket-binary "racket"])
@@ -351,6 +354,7 @@ spec:
   (define is-script? #t)
   (define run-label "no-label")
 
+
   (command-line
    #:once-each
    [("-s" "--scripts") "generate scripts" (set! is-script? #t)]
@@ -366,7 +370,11 @@ spec:
    #:once-any
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
-   #:args ([docker-image #f])
+   #:args ([docker-image #f] . selected-benchmarks)
+
+  ; If benchmarks is empty, then we'll generate it for all benchmarks
+  (if (empty? selected-benchmarks)
+    (set! selected-benchmarks ALL-BENCHMARKS))
 
   ;; Validate arguments
   (unless (memv pycket/racket '("pycket" "racket"))
@@ -383,10 +391,10 @@ spec:
 
   ;; Generate stuff
   (when is-script?
-    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-script))
+    (generate selected-benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-script))
 
   (when (not is-script?)
-    (generate benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-job docker-image))
+    (generate selected-benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-job docker-image))
 
   (let ([script/job (if is-script? "scripts" "jobs")])
     (if (equal? pycket/racket "racket")
