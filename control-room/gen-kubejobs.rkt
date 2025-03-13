@@ -99,7 +99,8 @@
 ;; PYPYLOG=jit-log-opt,jit-backend:~a-~a.trace ~~/pycket/pycket-c~a --jit decay=0,max_unroll_loops=5 ~a-nothing.rkt &> ~~/timings/~a-~a.rst
 ;; PYPYLOG=jit-log-opt,jit-backend:~a-~a-~a.trace ~~/pycket/pycket-c~a ~a-nothing.rkt &>> ~~/timings/~a/~a-~a.rst
 
-
+(define PYCKET-TRACE-LINE
+  "PYPYLOG=jit-log-opt,jit-backend-counts,jit-summary:")
 
 ;; "trace-log-10-times"
 ;; "no-trace-log-10-times"
@@ -123,14 +124,14 @@ BENCH_DIR=$NFS_SHARE/benchmarks"])
     (if generate-traces?
       ;; script to generate traces
       (format "~a
-TRACES_DIR=$BENCH_DIR/traces
+TRACES_DIR=$BENCH_DIR/traces/~a
 SOURCE_DIR=$BENCH_DIR/src/~a
 OUTPUT_DIR=$BENCH_DIR/timings-traces/~a
 # make sure the output dir exists
 mkdir -p $OUTPUT_DIR
 BINARY_DIR=$PYCKET_DIR
 
-" base-pre (warmup-human-repr with-warmup?) label)
+" base-pre label (warmup-human-repr with-warmup?) label)
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
@@ -185,21 +186,16 @@ do
   $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
 done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
           (format "
-mkdir -p $TRACES_DIR/~a
-
-for i in `seq 1 ~a`;
-do
-  PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a/~a-$i.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
-done
-\n\n" time-output-file-name* OUTER-ITERATIONS time-output-file-name* time-output-file-name*
+~a$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a
+\n\n" PYCKET-TRACE-LINE time-output-file-name* 
       pycket-binary bench-name time-output-file-name
             )
           )
 
       ;; with warmup -- multiple runs within the benchmark source
       (if gen-traces?
-        (format "PYPYLOG=jit-log-opt,jit-backend,jit-summary:$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
-                time-output-file-name* pycket-binary bench-name time-output-file-name)
+        (format "~a$TRACES_DIR/~a.trace $BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
+                PYCKET-TRACE-LINE time-output-file-name* pycket-binary bench-name time-output-file-name)
         (format "$BINARY_DIR/~a $SOURCE_DIR/~a.rkt &>> $OUTPUT_DIR/~a\n\n"
                 pycket-binary bench-name time-output-file-name))
     )))
@@ -373,7 +369,7 @@ spec:
    #:args ([docker-image #f] . selected-benchmarks)
 
   ; If benchmarks is empty, then we'll generate it for all benchmarks
-  (if (empty? selected-benchmarks)
+  (when (empty? selected-benchmarks)
     (set! selected-benchmarks ALL-BENCHMARKS))
 
   ;; Validate arguments
