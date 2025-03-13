@@ -225,7 +225,7 @@ done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
 ;; run-label is a string
 (define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? run-label gen-func [DOCKER-IMAGE #f])
   (for ([b (in-list benchmarks)])
-    (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? run-label DOCKER-IMAGE)])
+   (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? run-label DOCKER-IMAGE)])
       (let-values ([(path content) (gen-func config)])
             (call-with-output-file path
               (lambda (bop)
@@ -367,6 +367,17 @@ spec:
    [("--with-warmup") "with warmup (for pycket)" (set! with-warmup? #t)]
    [("--no-warmup") "without warmup (for pycket)" (set! with-warmup? #f)]
    #:args ([docker-image #f] . selected-benchmarks)
+
+
+  ;; sanity check the given benchmarks
+  ;; now that they can be given as an external list
+  ;; we need to check misspellings etc, rather than silently fail
+  ;; to generate anything
+  (unless (empty? selected-benchmarks)
+    (for ([b (in-list selected-benchmarks)])
+      (unless (memv (string->symbol b) ALL-BENCHMARKS)
+        (error 'generate (format "unknown benchmark: ~a. Aborting." b)))))
+
 
   ; If benchmarks is empty, then we'll generate it for all benchmarks
   (when (empty? selected-benchmarks)
