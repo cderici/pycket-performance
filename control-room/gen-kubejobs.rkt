@@ -146,7 +146,10 @@ BINARY_DIR=~a
   (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
 
 (define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed run-label)
-  (let ([warmup/traces (if gen-traces? TRACES-INTERNAL (warmup-repr with-warmup?))]
+  (let ([warmup/traces
+          (if gen-traces?
+            (format "~a T" (warmup-repr with-warmup?))
+            (warmup-repr with-warmup?))]
         [pycket/racket (pycket/racket-internal-repr is-pycket?)])
     (if (not is-pycket?)
         ;; racket
