@@ -120,23 +120,24 @@
 
 NFS_SHARE=/mnt/nfs_share
 PYCKET_DIR=/opt/pycket
-BENCH_DIR=$NFS_SHARE/benchmarks"])
+BENCH_DIR=$NFS_SHARE/benchmarks
+RESULTS_DIR=$BENCH_DIR/results"])
     (if generate-traces?
       ;; script to generate traces
       (format "~a
-TRACES_DIR=$BENCH_DIR/traces/~a
+TRACES_DIR=$RESULTS_DIR/~a/traces
 SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$BENCH_DIR/timings-traces/~a
-# make sure the output dir exists
-mkdir -p $OUTPUT_DIR
+OUTPUT_DIR=$RESULTS_DIR/~a/timings-traces
+# make sure the output dirs exist
+mkdir -p $OUTPUT_DIR $TRACES_DIR
 BINARY_DIR=$PYCKET_DIR
 
 " base-pre label (warmup-human-repr with-warmup?) label)
       ;; no traces, regular script
       (format "~a
 SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$BENCH_DIR/timings/~a
-# make sure the output dir exists
+OUTPUT_DIR=$RESULTS_DIR/~a/timings
+# make sure the output dirs exist
 mkdir -p $OUTPUT_DIR
 BINARY_DIR=~a
 
@@ -180,6 +181,7 @@ BINARY_DIR=~a
                                       (warmup-repr with-warmup?))]
          [time-output-file-name* (format "~a-~a" pycket-variant-repr bench-name)]
          [time-output-file-name (format "~a.rst" time-output-file-name*)])
+    ;; TODO: refactor below. If we're generating traces, WW is the same with NW
     (if (not with-warmup?)
       ;; no warmup -- single run in a for loop
       (if (not gen-traces?)
