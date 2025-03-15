@@ -135,6 +135,9 @@ def main():
     if relative_interp and relative_interp not in user_selected_interps:
         raise Exception(f"Selected relative interp {relative_interp} is not given as one of compare interpreters.")
 
+    if relative_interp and b_param:
+        raise Exception(f"Single plots with relative is not supported yet. Also doesn't make too much sense.")
+
     if relative_interp:
         outfile_name += f"relative to {relative_interp} "
 
