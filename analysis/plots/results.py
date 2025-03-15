@@ -288,16 +288,16 @@ class PlotConfig:
         plt.xlabel("Iterations")
 
         for interp, result_dict in benchmark_results.items():
-            if self.relative_interp:
-                # Add a horizontal line for relative interp baseline (normalized to 1)
-                plt.axhline(y=1, color="magenta", linewidth=2, linestyle="-", label=interp_human(self.relative_interp))
-                continue
-
-            # Sanity check to make sure we have the result of the correct benchmark.
+           # Sanity check to make sure we have the result of the correct benchmark.
             if benchmark_name not in result_dict:
                 raise Exception(f"{benchmark_name} not in result_dict {result_dict}. See collect_benchmark_results method.")
 
             result = result_dict[benchmark_name]
+
+            # Results with only 1 value (e.g. no-warmup trace runs) gets a horizontal line
+            if result.sample_size == 1:
+                plt.axhline(y=result.representative, color=self._interp_color(interp), label=interp_human(interp), linewidth=2)
+                continue
 
             x = np.arange(result.sample_size)
 
