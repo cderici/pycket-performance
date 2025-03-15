@@ -1,12 +1,10 @@
 import os, re
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.core.fromnumeric import std
 import scipy.stats as stats
 
 from pathlib import Path
 from scipy.interpolate import make_interp_spline
-from random import uniform as ru
 from functools import partial
 
 plt.style.use('fivethirtyeight')
@@ -232,7 +230,7 @@ CONFIG_SELECT = {
 # A config object for precisely one plot file
 class PlotConfig:
     def __init__(self,
-                 output_file_name,
+                 output_file_path,
                  sort_interp=None,
                  relative_interp=None,
                  is_single=False,
@@ -243,7 +241,7 @@ class PlotConfig:
         # Single plots are graph plots (whereas non-single ones are bar charts)
         self.is_single = is_single
 
-        self.output_file_name = output_file_name
+        self.output_file_path = output_file_path
         self.caption = caption
 
         # Validate interpreters
@@ -336,15 +334,18 @@ class PlotConfig:
     def _plot_preamble(self):
         plt.figure(figsize=(12, 8))
         # Prepare a caption using output_file
-        caption = Path(self.output_file_name.replace("_", " ")).stem
-        plt.title(f"{caption}")
+        plt.title(self.output_file_path.stem.replace("_", " "))
         plt.ylabel("Runtime (ms)")
 
     def _plot_postamble(self):
         plt.legend()
         plt.tight_layout()
-        print(f"Saving plot to {self.output_file_name}")
-        plt.savefig(self.output_file_name)
+        print(f"Saving plot to {self.output_file_path}")
+
+        # Make sure the directory exists
+        self.output_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        plt.savefig(self.output_file_path)
         plt.close()
 
     def _interp_color(self, interp):
@@ -540,7 +541,7 @@ class BenchmarkCollection():
             self.generate_plot(plot_config)
 
     def generate_plot(self, plot_config):
-        print(f"Generating comparison plot data for {plot_config.output_file_name}...")
+        print(f"Generating comparison plot data for {plot_config.output_file_path}...")
 
         # Collect benchmark results for given compare_configs and benchmark names
         benchmark_results = self.collect_benchmark_results(plot_config.benchmark_names,

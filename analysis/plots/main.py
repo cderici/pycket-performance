@@ -1,5 +1,6 @@
 import os
 import argparse
+import pathlib
 
 from results import *
 
@@ -152,20 +153,21 @@ def main():
     # Ingest the data from the given directory
     benchmark_collection = BenchmarkIngress(args.directory, excluded_benchmarks=HARDCODED_EXCLUDES).consume_create_collection()
 
+    out_directory = pathlib.Path(args.directory, "plots")
     # Generate PlotConfig(s)
     plot_configs = []
     benchmark_names = []
     if not b_param:
         # single (multi) plot config with benchmark_names = everything we collected from the given directory
-        filename = f"{outfile_name}.png"
+        filepath = out_directory / f"{outfile_name}.png"
         benchmark_names = list(benchmark_collection.benchmark_names)
-        plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, False, configs, benchmark_names, args.run_label))
+        plot_configs.append(PlotConfig(filepath, sort_interp, relative_interp, False, configs, benchmark_names, args.run_label))
     else:
         # possibly multiple (e.g. "all") single plot configs
         benchmark_names = list(benchmark_collection.benchmark_names) if b_param == "all" else [b_param]
         for b_name in benchmark_names:
-            filename = f"singles/{outfile_name}_{b_name}.png"
-            plot_configs.append(PlotConfig(filename, sort_interp, relative_interp, True, configs, [b_name], args.run_label))
+            filepath = out_directory / f"singles/{outfile_name}_{b_name}.png"
+            plot_configs.append(PlotConfig(filepath, sort_interp, relative_interp, True, configs, [b_name], args.run_label))
 
     benchmark_collection.generate_plots(plot_configs)
 
