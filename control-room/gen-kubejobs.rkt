@@ -118,7 +118,7 @@
     (error 'preamble "something is wrong, racket and generate-traces? can't be both true"))
   (let ([base-pre "#!/bin/bash
 
-NFS_SHARE=/mnt/nfs_share
+NFS_SHARE=/mnt/research_storage
 PYCKET_DIR=/opt/pycket
 BENCH_DIR=$NFS_SHARE/benchmarks
 RESULTS_DIR=$BENCH_DIR/results"])
