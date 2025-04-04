@@ -7,7 +7,7 @@ JOBS_DIR := jobs
 DOCKER_IMAGE := canerderici/pycket-benchmark:latest
 
 
-NFS_SHARE := /mnt/nfs_share
+NFS_SHARE := /mnt/research_storage
 BENCHMARK_DIR := $(NFS_SHARE)/benchmarks
 SRC_TARGET_DIR	  := $(BENCHMARK_DIR)/scripts
 JOBS_TARGET_DIR  := $(BENCHMARK_DIR)/jobs
