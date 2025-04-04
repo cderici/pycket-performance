@@ -102,6 +102,8 @@
 (define PYCKET-TRACE-LINE
   "PYPYLOG=jit-log-opt,jit-backend-counts,jit-summary:")
 
+(define NFS_DIR "/mnt/research_storage")
+
 ;; "trace-log-10-times"
 ;; "no-trace-log-10-times"
 ;; "extra-params-no-trace-10-times"
@@ -116,12 +118,12 @@
 (define (preamble is-pycket? with-warmup? generate-traces? label)
   (when (and generate-traces? (not is-pycket?))
     (error 'preamble "something is wrong, racket and generate-traces? can't be both true"))
-  (let ([base-pre "#!/bin/bash
+  (let ([base-pre (format "#!/bin/bash
 
-NFS_SHARE=/mnt/research_storage
+NFS_SHARE=~a
 PYCKET_DIR=/opt/pycket
 BENCH_DIR=$NFS_SHARE/benchmarks
-RESULTS_DIR=$BENCH_DIR/results"])
+RESULTS_DIR=$BENCH_DIR/results" NFS_DIR)])
     (if generate-traces?
       ;; script to generate traces
       (format "~a
@@ -303,7 +305,7 @@ spec:
         - name: ~a
           image: ~a
           command: [\"/bin/sh\", \"-c\"]
-          args: [\"/mnt/nfs_share/benchmarks/scripts/~a\"]
+          args: [\"~a/benchmarks/scripts/~a\"]
           env:
             - name: POD_NAME
               valueFrom:
@@ -311,7 +313,7 @@ spec:
                   fieldPath: metadata.name
           volumeMounts:
             - name: nfs-volume
-              mountPath: /mnt/nfs_share
+              mountPath: ~a
       restartPolicy: Never
       volumes:
         - name: nfs-volume
@@ -339,7 +341,7 @@ spec:
                pycket-job-name))])
           (values (string-append "jobs/" file-name "." extension)
                   (format job-template
-                    job-name job-name docker-image (string-append file-name ".sh")))))))
+                    job-name job-name docker-image NFS_DIR (string-append file-name ".sh") NFS_DIR))))))
 
 (module+ main
   (require racket/cmdline)
