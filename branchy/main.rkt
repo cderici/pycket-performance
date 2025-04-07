@@ -54,24 +54,28 @@
      (set! inner-iteration (string->number inner-iteration)))
 
    ;; mkdir generated if it doesn't exist
-   (let ([target-path (build-path (current-directory) GEN_DIR)])
-     (unless (directory-exists? target-path)
-       (make-directory target-path)))
+   (define (ensure-gen-dir)
+     (let ([target-path (build-path (current-directory) GEN_DIR)])
+       (unless (directory-exists? target-path)
+         (make-directory target-path))))
 
    (cond
      [(number? what?)
       (begin
         (printf "Generating : all-~as-~a-~a-~a.rkt\n"
                 what? input-size outer-iteration inner-iteration)
+        (ensure-gen-dir)
         (make-all-same what? input-size outer-iteration inner-iteration))]
      [(equal? what? 'random)
       (begin
         (printf "Generating : random38-~a-~a-~a.rkt\n"
                 input-size outer-iteration inner-iteration)
+        (ensure-gen-dir)
         (make-all-random input-size outer-iteration inner-iteration))]
      [(equal? what? 'fasl)
       (let ([fname (format "~a/use-fasl-~a-~a-~a-~a.rkt"
                            GEN_DIR input-size (or what-kind? 'random)  outer-iteration inner-iteration)])
         (printf "Generating : ~a\n" fname)
+        (ensure-gen-dir)
         (generate-fasl-test-file input-size fname what-kind? outer-iteration inner-iteration))]
      [else (printf usage)])))
