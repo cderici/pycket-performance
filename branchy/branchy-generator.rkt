@@ -9,7 +9,7 @@
     (lambda ()
       (printf "#lang racket/base
 
-(require \"simpler-branchy2.rkt\")
+(require \"branchy.rkt\")
 
 (define input '~a)
 
