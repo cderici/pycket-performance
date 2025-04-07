@@ -7,6 +7,9 @@
 
 (module+ main
 
+  ;; FIXME: refactor this entire program, could be written much better
+  ;; to accommodate later customizations
+
   (define what? #f)
   (define what-kind? #f) ; for fasl
   (define input-size 0)
@@ -15,9 +18,13 @@
   #;(define wk? 'random)
 
   (define usage (format
-"Usage: racket main.rkt <make> N:0 [--outer:15] [--inner:2000]
+"Usage: racket main.rkt <option> [--outer:15] [--inner:2000]
 
-        <make> : --make-same K | --make-ones | --make-zeros | --make-random | --make-fasl <kind>
+        <option> : --make-same <number> <how-many?>
+                   --make-ones <how-many?>
+                   --make-zeros <how-many?>
+                   --make-random <how-many?>
+                   --make-fasl <kind> <how-many?>
 
         <kind> : random | integer | flonum | rational | complex | symbol | string | char | boolean | path | regexp | box \n"))
 
