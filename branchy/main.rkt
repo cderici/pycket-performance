@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require "fasl-generator.rkt"
-         "branchy-generator.rkt"
+(require "private/fasl-generator.rkt"
+         "private/branchy-generator.rkt"
          racket/cmdline)
 
 
@@ -54,7 +54,7 @@
      (set! inner-iteration (string->number inner-iteration)))
 
    ;; mkdir generated if it doesn't exist
-   (let ([target-path (build-path (current-directory) "generated")])
+   (let ([target-path (build-path (current-directory) GEN_DIR)])
      (unless (directory-exists? target-path)
        (make-directory target-path)))
 
