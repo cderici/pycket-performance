@@ -4,6 +4,8 @@
 
 (provide (all-defined-out))
 
+(define GEN_DIR "./generated")
+
 (define (generate-branchy-test-file file-name gen-function input-size [outer-iteration 15][inner-iteration 1000])
   (with-output-to-file file-name
     (lambda ()
@@ -21,12 +23,12 @@
 #:exists 'replace))
 
 (define (make-all-random input-size [outer-iteration 15][inner-iteration 1000])
-  (generate-branchy-test-file (format "random38-~a-~a-~a.rkt" input-size outer-iteration inner-iteration)
+  (generate-branchy-test-file (format "~a/random38-~a-~a-~a.rkt" GEN_DIR input-size outer-iteration inner-iteration)
                  (lambda (x) (random 38)) ;; specific to function in simpler-branchy2
                  input-size outer-iteration inner-iteration))
 
 (define (make-all-same what? input-size [outer-iteration 15][inner-iteration 1000])
-  (generate-branchy-test-file (format "all-~as-~a-~a-~a.rkt" what? input-size outer-iteration inner-iteration)
+  (generate-branchy-test-file (format "~a/all-~as-~a-~a-~a.rkt" GEN_DIR what? input-size outer-iteration inner-iteration)
                  (lambda (x) what?)
                  input-size outer-iteration inner-iteration))
 
