@@ -7,7 +7,7 @@
 
 (define GEN_DIR "./generated")
 
-(define (generate-branchy-test-file file-path gen-function input-size [outer-iteration 15][inner-iteration 1000])
+(define (generate-branchy-test-file file-path gen-function input-size outer-iteration inner-iteration)
   ;; our file will require branchy.rkt
   ;; so make sure it's there
   (let ([target-path (build-path (path-only file-path) "branchy.rkt")])
@@ -29,18 +29,13 @@
 (printf \"---- LOOP ENDS ---- \\n\")" (build-list input-size gen-function) outer-iteration inner-iteration))
 #:exists 'replace))
 
-(define (make-all-random input-size [outer-iteration 15][inner-iteration 1000])
+(define (make-all-random input-size outer-iteration inner-iteration)
   (generate-branchy-test-file (format "~a/random38-~a-~a-~a.rkt" GEN_DIR input-size outer-iteration inner-iteration)
                  (lambda (x) (random 38)) ;; specific to function in simpler-branchy2
                  input-size outer-iteration inner-iteration))
 
-(define (make-all-same what? input-size [outer-iteration 15][inner-iteration 1000])
+(define (make-all-same what? input-size outer-iteration inner-iteration)
   (generate-branchy-test-file (format "~a/all-~as-~a-~a-~a.rkt" GEN_DIR what? input-size outer-iteration inner-iteration)
                  (lambda (x) what?)
                  input-size outer-iteration inner-iteration))
 
-(define (make-all-zeros input-size [outer-iteration 15][inner-iteration 1000])
-  (make-all-same 0 input-size outer-iteration inner-iteration))
-
-(define (make-all-ones input-size [outer-iteration 15][inner-iteration 1000])
-  (make-all-same 1 input-size outer-iteration inner-iteration))

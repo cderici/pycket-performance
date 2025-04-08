@@ -13,9 +13,12 @@
   (define what? #f)
   (define what-kind? #f) ; for fasl
   (define input-size 0)
-  (define outer-iteration 15)
-  (define inner-iteration 2000)
+  (define OUTER_ITER_DEFAULT 10)
+  (define INNER_ITER_DEFAULT 2000)
   #;(define wk? 'random)
+
+  (define outer-iteration OUTER_ITER_DEFAULT)
+  (define inner-iteration INNER_ITER_DEFAULT)
 
   (define usage (format
 "Usage: racket main.rkt <option> [--outer:15] [--inner:2000]
