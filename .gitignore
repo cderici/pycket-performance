@@ -4,5 +4,4 @@ tmp/experiment-status_*
 *~
 *.png
 *__pycache__*
-*generated*
 *webapp*
