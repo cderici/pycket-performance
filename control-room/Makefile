@@ -1,10 +1,12 @@
-
+ifndef LABEL
+$(error LABEL is not set. Please run make with LABEL set, e.g., 'make LABEL=some-label')
+endif
 
 RACKET_EXECUTABLE := $(shell which racket)
 GENERATOR_SCRIPT := gen-kubejobs.rkt
 SCRIPTS_DIR := scripts
 JOBS_DIR := jobs
-DOCKER_IMAGE := canerderici/pycket-benchmark:latest
+DOCKER_IMAGE := canerderici/pycket-benchmark:$(LABEL)
 
 
 NFS_SHARE := /mnt/research_storage
