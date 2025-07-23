@@ -21,6 +21,8 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand stx))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
+
 
 (main)

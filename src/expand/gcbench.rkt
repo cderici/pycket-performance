@@ -4,7 +4,7 @@
 ;  It was translated into Scheme by William D Clinger of Northeastern Univ;
 ;    the Scheme version uses (RUN-BENCHMARK <string> <thunk>)
 ;  Last modified 30 May 1997.
-; 
+;
 ;       This is no substitute for real applications.  No actual application
 ;       is likely to behave in exactly this way.  However, this benchmark was
 ;       designed to be more representative of real applications than other
@@ -23,7 +23,7 @@
 ;       containing many pointers.  The other is a large array containing
 ;       double precision floating point numbers.  Both should be of comparable
 ;       size.
-; 
+;
 ;       The results are only really meaningful together with a specification
 ;       of how much memory was used.  It is possible to trade memory for
 ;       better time performance.  This benchmark should be run in a 32 MB
@@ -183,6 +183,7 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand stx))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
 
 (main)

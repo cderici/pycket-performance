@@ -32,15 +32,15 @@
 ; From: luks@sisters.cs.uoregon.edu
 ; To: will
 ; Subject: Pancake flips
-; 
+;
 ; Procedure P_n generates a grey code of all perms of n elements
 ; on top of stack ending with reversal of starting sequence
-; 
+;
 ; F_n is flip of top n elements.
-; 
-; 
+;
+;
 ; procedure P_n
-; 
+;
 ;   if n>1 then
 ;     begin
 ;        repeat   P_{n-1},F_n   n-1 times;
@@ -102,6 +102,7 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand stx))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
 
 (main)

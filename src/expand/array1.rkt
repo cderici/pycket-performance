@@ -2,7 +2,7 @@
 #lang racket/base
 (require racket/syntax "conf.rkt")
 
-(define array1-module-stx
+(define stx
   #'(module array1 racket/base
       (define outer 100)
 
@@ -31,7 +31,8 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand array1-module-stx))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
 
 (main)
 

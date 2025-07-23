@@ -24,7 +24,8 @@
 (define (open-output-file/truncate filename)
   (open-output-file filename #:mode 'binary #:exists 'truncate))
 
-(define expand-outer 1000)
+(define expand-outer 100)
+(define expand-inner 10)
 
 ; Gabriel benchmarks
 (define boyer-iters       150)

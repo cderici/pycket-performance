@@ -1,9 +1,9 @@
 ;
 ;  GCOld.sch x.x 00/08/03
 ;  translated from GCOld.java 2.0a 00/08/23
-; 
+;
 ; Copyright 2000 Sun Microsystems, Inc. All rights reserved.
-; 
+;
 ;
 
 #lang racket/base
@@ -391,6 +391,7 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand stx))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
 
 (main)

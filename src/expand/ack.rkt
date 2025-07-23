@@ -2,7 +2,7 @@
 
 (require racket/syntax "conf.rkt")
 
-(define ack-module-sexp
+(define stx
   #'(module ack racket/base
      (define outer 100)
      (define (ack m n)
@@ -12,7 +12,8 @@
 
 (define (main)
   (for ([i (in-range expand-outer)])
-    (time (expand ack-module-sexp))))
+    (time (for ([j (in-range expand-inner)])
+            (expand stx)))))
 
 (main)
 
