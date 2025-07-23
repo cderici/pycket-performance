@@ -25,6 +25,12 @@ gen-all: all-racket all-pycket
 all-pycket: all-pycket-scripts all-pycket-jobs
 	@echo "\nReady To Go\nConsider running 'make stage-all'"
 
+.PHONY: all-scripts
+all-scripts: all-pycket-scripts racket-scripts
+
+.PHONY: all-jobs
+all-jobs: all-pycket-jobs racket-jobs
+
 .PHONY: all-pycket-trace
 all-pycket-trace: all-pycket-trace-scripts all-pycket-trace-jobs
 	@echo "\nReady To Go\nConsider running 'make stage-all'"
