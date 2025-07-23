@@ -115,38 +115,41 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; all inputs are bool
-(define (preamble is-pycket? with-warmup? generate-traces? label)
+(define (preamble is-pycket? with-warmup? generate-traces? label src-subdir-override)
   (when (and generate-traces? (not is-pycket?))
     (error 'preamble "something is wrong, racket and generate-traces? can't be both true"))
-  (let ([base-pre (format "#!/bin/bash
+  (let ([source-sub-dir
+          (if src-subdir-override src-subdir-override
+              (warmup-human-repr with-warmup?))])
+    (let ([base-pre (format "#!/bin/bash
 
-NFS_SHARE=~a
-PYCKET_DIR=/opt/pycket
-BENCH_DIR=$NFS_SHARE/benchmarks
-RESULTS_DIR=$BENCH_DIR/results" NFS_DIR)])
-    (if generate-traces?
-      ;; script to generate traces
-      (format "~a
-TRACES_DIR=$RESULTS_DIR/~a/traces
-SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$RESULTS_DIR/~a/timings-traces
-# make sure the output dirs exist
-mkdir -p $OUTPUT_DIR $TRACES_DIR
-BINARY_DIR=$PYCKET_DIR
+  NFS_SHARE=~a
+  PYCKET_DIR=/opt/pycket
+  BENCH_DIR=$NFS_SHARE/benchmarks
+  RESULTS_DIR=$BENCH_DIR/results" NFS_DIR)])
+      (if generate-traces?
+        ;; script to generate traces
+        (format "~a
+  TRACES_DIR=$RESULTS_DIR/~a/traces
+  SOURCE_DIR=$BENCH_DIR/src/~a
+  OUTPUT_DIR=$RESULTS_DIR/~a/timings-traces
+  # make sure the output dirs exist
+  mkdir -p $OUTPUT_DIR $TRACES_DIR
+  BINARY_DIR=$PYCKET_DIR
 
-" base-pre label (warmup-human-repr with-warmup?) label)
-      ;; no traces, regular script
-      (format "~a
-SOURCE_DIR=$BENCH_DIR/src/~a
-OUTPUT_DIR=$RESULTS_DIR/~a/timings
-# make sure the output dirs exist
-mkdir -p $OUTPUT_DIR
-BINARY_DIR=~a
+  " base-pre label source-sub-dir label)
+        ;; no traces, regular script
+        (format "~a
+  SOURCE_DIR=$BENCH_DIR/src/~a
+  OUTPUT_DIR=$RESULTS_DIR/~a/timings
+  # make sure the output dirs exist
+  mkdir -p $OUTPUT_DIR
+  BINARY_DIR=~a
 
-" base-pre
-  (warmup-human-repr with-warmup?)
-  label
-  (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin")))))
+  " base-pre
+    source-sub-dir
+    label
+    (if is-pycket? "$PYCKET_DIR" "$PYCKET_DIR/racket/bin"))))))
 
 (define (log-line is-new? is-pycket? bench-name with-warmup? gen-traces? started/completed run-label)
   (let ([warmup/traces
@@ -176,7 +179,7 @@ BINARY_DIR=~a
 (define (pycket-script bench-name is-new? with-warmup? gen-traces?)
   #;(when (and (equal? with/no-warmup "no") gen-traces?)
     (error 'pycket-launcher "Cannot generate traces without warmup"))
-  (let* ([pycket-binary (if is-new? "pycket-c-linklets" "pycket-c")]
+  (let* ([pycket-binary (if is-new? "pycket-c-linklets --no-io-linklet" "pycket-c")]
          ;; e.g. NP-WW (new pycket with warmup)
          [pycket-variant-repr (format "~a~a-~a"
                                       (new/old-repr is-new?) (repr-internal PYCKET-REPR)
@@ -215,10 +218,11 @@ done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
 ;; is-pycket? : bool (false -> it's racket)
 ;; is-new?    : bool (false -> it's old)
 ;; run-label  : string
-(struct kubejob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label))
+;; src-subdir-override : str (name of the subdir for sources under directory "src")
+(struct kubejob-config (bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label src-subdir-override))
 
-(define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? run-label [docker-image #f])
-  (kubejob-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label))
+(define (make-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? run-label src-subdir-override [docker-image #f])
+  (kubejob-config bench-name is-script? is-pycket? is-new? with-warmup? gen-traces? docker-image run-label src-subdir-override))
 
 
 ;; benchmarks is a list of benchmark names
@@ -230,9 +234,9 @@ done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
 ;; gen-func is a function that takes a kubejob-config and produces a either a script or job.
 ;;   gen-func should return two values: the path of the file generated and the file contents
 ;; run-label is a string
-(define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? run-label gen-func [DOCKER-IMAGE #f])
+(define (generate benchmarks is-script? is-pycket? is-new? with-warmup? gen-traces? run-label gen-func [DOCKER-IMAGE #f] [src-subdir-override #f])
   (for ([b (in-list benchmarks)])
-   (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? run-label DOCKER-IMAGE)])
+   (let ([config (make-config b is-script? is-pycket? is-new? with-warmup? gen-traces? run-label src-subdir-override DOCKER-IMAGE)])
       (let-values ([(path content) (gen-func config)])
             (call-with-output-file path
               (lambda (bop)
@@ -250,12 +254,13 @@ done\n\n" OUTER-ITERATIONS pycket-binary bench-name time-output-file-name)
         [is-new? (kubejob-config-is-new? config)]
         [with-warmup? (kubejob-config-with-warmup? config)]
         [generate-traces? (kubejob-config-gen-traces? config)]
-        [run-label (kubejob-config-run-label config)])
+        [run-label (kubejob-config-run-label config)]
+        [src-subdir-override (kubejob-config-src-subdir-override config)])
     (let ([launch-function (if is-pycket? pycket-script racket-script)])
       (let-values ([(file-name extension) (generate-file-path config)])
         (values (string-append "scripts/" file-name "." extension)
                 (format "~a~a~a~a"
-                  (preamble is-pycket? with-warmup? generate-traces? run-label)
+                  (preamble is-pycket? with-warmup? generate-traces? run-label src-subdir-override)
                   (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "STARTED" run-label)
                   (launch-function bench-name is-new? with-warmup? generate-traces?)
                   (log-line is-new? is-pycket? bench-name with-warmup? generate-traces? "COMPLETED" run-label)))))))
@@ -304,6 +309,7 @@ spec:
       containers:
         - name: ~a
           image: ~a
+          imagePullPolicy: Always
           command: [\"/bin/sh\", \"-c\"]
           args: [\"~a/benchmarks/scripts/~a\"]
           env:
@@ -357,6 +363,7 @@ spec:
   (define is-script? #t)
   (define run-label "no-label")
 
+  (define src-subdir-override #f)
 
   (command-line
    #:once-each
@@ -364,6 +371,7 @@ spec:
    [("-j" "--jobs") "generate kubernetes jobs" (set! is-script? #f)]
    [("-t" "--traces") "with warmup, extract the JIT log" (set! generate-traces? #t)]
    [("-l" "--run-label") label "stamp the run with this label" (set! run-label label)]
+   [("--src-sub-dir") src-subdir "subdir for source codes under src" (set! src-subdir-override src-subdir)]
    #:once-any
    [("-r" "--racket") "generate racket scripts" (set! pycket/racket "racket") (set! with-warmup? #t)]
    [("-p" "--pycket") "generate pycket scripts" (set! pycket/racket "pycket")]
@@ -405,7 +413,7 @@ spec:
 
   ;; Generate stuff
   (when is-script?
-    (generate selected-benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-script))
+    (generate selected-benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-script #f src-subdir-override))
 
   (when (not is-script?)
     (generate selected-benchmarks is-script? is-pycket? is-new? with-warmup? generate-traces? run-label gen-job docker-image))
